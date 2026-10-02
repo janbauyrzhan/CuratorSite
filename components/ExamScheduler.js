@@ -668,7 +668,7 @@ export default function ExamScheduler({
                         {g.name}
                       </div>
                       <div style={{ fontSize: '11px', color: '#64748b', fontWeight: 600, marginTop: '1px' }}>
-                        {g.subject || 'Пәнсіз'} • {g.students?.length || 0} оқушы
+                        {g.subject || 'Пәнсіз'} • {g.students_exam?.length || 0} оқушы
                       </div>
                     </div>
 

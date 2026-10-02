@@ -153,9 +153,13 @@ export default function App() {
   const [newName,      setNewName]      = useState('');
   const [newSubject,   setNewSubject]   = useState('');
 
-  /* ── Student Data & Text State ──────────────────────────── */
-  const [rawText,  setRawText]  = useState('');
-  const [students, setStudents] = useState([]);
+  /* ── «Жұптық жұмыс» Student Data (ФИО + телефон) ───────── */
+  const [rawTextPairs,  setRawTextPairs]  = useState('');
+  const [studentsPairs, setStudentsPairs] = useState([]);
+
+  /* ── «Сабақ тапсыру» Student Data (ТОЛЬКО ФИО) ──────────── */
+  const [rawTextExam,  setRawTextExam]  = useState('');
+  const [studentsExam, setStudentsExam] = useState([]);
 
   /* ── Algorithm Settings (Pairs) ─────────────────────────── */
   const [divType,  setDivType]  = useState('mixed');
@@ -203,15 +207,20 @@ export default function App() {
         setDivType(userGroups.divType || 'mixed');
         const g = userGroups.groups.find(x => x.id === targetGid);
         if (g) {
-          setRawText(g.rawText || '');
-          setStudents(g.students || []);
+          // Load INDEPENDENT student lists for each tab
+          setRawTextPairs(g.rawTextPairs || '');
+          setStudentsPairs(g.students_pairs || []);
+          setRawTextExam(g.rawTextExam || '');
+          setStudentsExam(g.students_exam || []);
         }
       } else {
         // Absolutely clean state for this user (no foreign data)
         setGroups([]);
         setActiveGid(null);
-        setRawText('');
-        setStudents([]);
+        setRawTextPairs('');
+        setStudentsPairs([]);
+        setRawTextExam('');
+        setStudentsExam([]);
         setSchedule([]);
         setWeekIdx(0);
       }
@@ -219,8 +228,10 @@ export default function App() {
       setUser(null);
       setGroups([]);
       setActiveGid(null);
-      setRawText('');
-      setStudents([]);
+      setRawTextPairs('');
+      setStudentsPairs([]);
+      setRawTextExam('');
+      setStudentsExam([]);
       setSchedule([]);
       setWeekIdx(0);
     }
@@ -238,21 +249,21 @@ export default function App() {
     });
   }, [user, groups, activeGid, weekIdx, divType, authLoaded]);
 
-  /* ── Rebuild Schedule when Students or Division Mode Changes */
+  /* ── Rebuild Schedule when Pairs Students or Division Mode Changes */
   useEffect(() => {
-    if (students.length < 2) {
-      if (students.length === 1) {
-        setSchedule([[[students[0]]]]);
+    if (studentsPairs.length < 2) {
+      if (studentsPairs.length === 1) {
+        setSchedule([[[studentsPairs[0]]]]);
       } else {
         setSchedule([]);
       }
       return;
     }
-    const raw = divType === 'gendered' ? makeGenderedSchedule(students) : makeSchedule(students);
+    const raw = divType === 'gendered' ? makeGenderedSchedule(studentsPairs) : makeSchedule(studentsPairs);
     const capped = raw.slice(0, MAX_WEEKS);
     setSchedule(capped);
     setWeekIdx(prev => Math.min(prev, Math.max(0, capped.length - 1)));
-  }, [students, divType]);
+  }, [studentsPairs, divType]);
 
   /* ── Derived Variables (Pairs) ──────────────────────────── */
   const activeGroup  = groups.find(g => g.id === activeGid) || null;
@@ -272,7 +283,7 @@ export default function App() {
     });
   }, [svgTemplate, weekText, subjectText, currentPairs]);
 
-  /* ══ DEMO ONBOARDING ACTION (Scoped only to active group) ══ */
+  /* ══ DEMO ONBOARDING ACTION (Pairs only, scoped to active group) ══ */
   function insertDemoData() {
     let targetGid = activeGid;
     if (!targetGid || !groups.find(g => g.id === targetGid)) {
@@ -280,18 +291,23 @@ export default function App() {
         id: uid(),
         name: 'Инфо-45',
         subject: 'Информатика',
-        rawText: DEMO_STUDENTS_TEXT,
-        students: [],
+        rawTextPairs: DEMO_STUDENTS_TEXT,
+        students_pairs: [],
+        rawTextExam: '',
+        students_exam: [],
       };
       targetGid = demoGroup.id;
       setGroups(prev => [demoGroup, ...prev.filter(g => g.id !== demoGroup.id)]);
       setActiveGid(targetGid);
     }
-    setRawText(DEMO_STUDENTS_TEXT);
-    const parsed = parseStudents(DEMO_STUDENTS_TEXT);
-    setStudents(parsed);
+    setRawTextPairs(DEMO_STUDENTS_TEXT);
+    const parsed = parseStudents(DEMO_STUDENTS_TEXT); // with phones for pairs
+    setStudentsPairs(parsed);
     setWeekIdx(0);
-    setGroups(prev => prev.map(g => g.id === targetGid ? { ...g, rawText: DEMO_STUDENTS_TEXT, students: parsed } : g));
+    setGroups(prev => prev.map(g => g.id === targetGid
+      ? { ...g, rawTextPairs: DEMO_STUDENTS_TEXT, students_pairs: parsed }
+      : g
+    ));
     notify('✨ 28 оқушының демо-үлгісі сәтті қойылды!');
   }
 
@@ -302,8 +318,10 @@ export default function App() {
       id: uid(),
       name: newName.trim(),
       subject: newSubject.trim(),
-      rawText: '',
-      students: [],
+      rawTextPairs: '',
+      students_pairs: [],
+      rawTextExam: '',
+      students_exam: [],
     };
     const nextGroups = [...groups, g];
     setGroups(nextGroups);
@@ -311,8 +329,10 @@ export default function App() {
     setNewName('');
     setNewSubject('');
     setShowNewGroup(false);
-    setRawText('');
-    setStudents([]);
+    setRawTextPairs('');
+    setStudentsPairs([]);
+    setRawTextExam('');
+    setStudentsExam([]);
     setWeekIdx(0);
     if (user?.username) {
       saveUserGroups(user.username, { groups: nextGroups, activeGid: g.id, weekIdx: 0, divType });
@@ -326,8 +346,10 @@ export default function App() {
     setGroups(next);
     const ng = next[0] || null;
     setActiveGid(ng?.id || null);
-    setRawText(ng?.rawText || '');
-    setStudents(ng?.students || []);
+    setRawTextPairs(ng?.rawTextPairs || '');
+    setStudentsPairs(ng?.students_pairs || []);
+    setRawTextExam(ng?.rawTextExam || '');
+    setStudentsExam(ng?.students_exam || []);
     setWeekIdx(0);
     if (user?.username) {
       saveUserGroups(user.username, { groups: next, activeGid: ng?.id || null, weekIdx: 0, divType });
@@ -338,12 +360,15 @@ export default function App() {
     const g = groups.find(g => g.id === gid);
     if (!g) return;
     setActiveGid(gid);
-    setRawText(g.rawText || '');
-    setStudents(g.students || []);
+    // Load INDEPENDENT lists for each tab
+    setRawTextPairs(g.rawTextPairs || '');
+    setStudentsPairs(g.students_pairs || []);
+    setRawTextExam(g.rawTextExam || '');
+    setStudentsExam(g.students_exam || []);
     setWeekIdx(0);
   }
 
-  /* ══ SAVE CURRENT GROUP SETTINGS (Prompt Requirement 3) ════ */
+  /* ══ SAVE «ЖҰПТЫҚ ЖҰМЫС» SETTINGS ONLY ════════════════════ */
   function handleSaveCurrentGroup() {
     if (!activeGid) {
       notify('Алдымен топты таңдаңыз немесе құрыңыз');
@@ -353,8 +378,9 @@ export default function App() {
       if (g.id === activeGid) {
         return {
           ...g,
-          rawText,
-          students,
+          rawTextPairs,
+          students_pairs: studentsPairs,
+          // students_exam and rawTextExam are NOT touched here
         };
       }
       return g;
@@ -370,9 +396,10 @@ export default function App() {
     }
     setSavedAnim(true);
     setTimeout(() => setSavedAnim(false), 2000);
-    notify('Топ параметрлері сәтті сақталды ✓');
+    notify('Жұптық жұмыс деректері сақталды ✓');
   }
 
+  /* ══ SAVE «САБАҚ ТАПСЫРУ» SETTINGS ONLY ════════════════════ */
   function handleSaveExamGroup(examSettings) {
     if (!activeGid) {
       notify('Алдымен топты таңдаңыз немесе құрыңыз');
@@ -382,8 +409,9 @@ export default function App() {
       if (g.id === activeGid) {
         return {
           ...g,
-          rawText,
-          students,
+          rawTextExam,
+          students_exam: studentsExam,
+          // rawTextPairs and students_pairs are NOT touched here
           examSettings: {
             ...(g.examSettings || {}),
             ...examSettings,
@@ -406,32 +434,58 @@ export default function App() {
     notify('«Сабақ тапсыру» баптаулары сақталды ✓');
   }
 
-  /* ══ STUDENT INPUT & PARSER ACTIONS ═════════════════════════ */
-  function applyText(text, options = {}) {
-    const parsed = parseStudents(text, options);
-    setStudents(parsed);
+  /* ══ PAIRS STUDENT INPUT & PARSER ═══════════════════════════ */
+  // Парсер извлекает ФИО + телефон (для жұптық жұмыс)
+  function applyTextPairs(text) {
+    const parsed = parseStudents(text); // phones kept
+    setStudentsPairs(parsed);
     setWeekIdx(0);
     if (activeGid) {
-      setGroups(prev => prev.map(g => g.id === activeGid ? { ...g, rawText: text, students: parsed } : g));
+      setGroups(prev => prev.map(g => g.id === activeGid
+        ? { ...g, rawTextPairs: text, students_pairs: parsed }
+        : g
+      ));
     }
   }
 
-  function handleBlur(options = {}) {
-    if (!rawText.trim()) return;
-    const norm = normalizeText(rawText, options);
-    if (norm !== rawText) {
-      setRawText(norm);
-      applyText(norm, options);
+  function handleBlurPairs() {
+    if (!rawTextPairs.trim()) return;
+    const norm = normalizeText(rawTextPairs); // keep phones
+    if (norm !== rawTextPairs) {
+      setRawTextPairs(norm);
+      applyTextPairs(norm);
+    }
+  }
+
+  /* ══ EXAM STUDENT INPUT & PARSER ════════════════════════════ */
+  // Парсер ВСЕГДА stripPhones: true — только чистые имена
+  function applyTextExam(text) {
+    const parsed = parseStudents(text, { stripPhones: true }); // phones stripped
+    setStudentsExam(parsed);
+    if (activeGid) {
+      setGroups(prev => prev.map(g => g.id === activeGid
+        ? { ...g, rawTextExam: text, students_exam: parsed }
+        : g
+      ));
+    }
+  }
+
+  function handleBlurExam() {
+    if (!rawTextExam.trim()) return;
+    const norm = normalizeText(rawTextExam, { stripPhones: true }); // strip phones
+    if (norm !== rawTextExam) {
+      setRawTextExam(norm);
+      applyTextExam(norm);
     }
   }
 
   function toggleGender(id) {
-    setStudents(prev => {
+    setStudentsPairs(prev => {
       const next = prev.map(s => s.id === id
         ? { ...s, gender: s.gender === 'm' ? 'f' : s.gender === 'f' ? 'u' : 'm' }
         : s);
       if (activeGid) {
-        setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, students: next } : g));
+        setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, students_pairs: next } : g));
       }
       return next;
     });
@@ -502,15 +556,19 @@ export default function App() {
         setDivType(userGroups.divType || 'mixed');
         const g = userGroups.groups.find(x => x.id === targetGid);
         if (g) {
-          setRawText(g.rawText || '');
-          setStudents(g.students || []);
+          setRawTextPairs(g.rawTextPairs || '');
+          setStudentsPairs(g.students_pairs || []);
+          setRawTextExam(g.rawTextExam || '');
+          setStudentsExam(g.students_exam || []);
         }
       } else {
-        // Absolutely clean state for a new curator (Prompt requirement 1)
+        // Absolutely clean state for a new curator
         setGroups([]);
         setActiveGid(null);
-        setRawText('');
-        setStudents([]);
+        setRawTextPairs('');
+        setStudentsPairs([]);
+        setRawTextExam('');
+        setStudentsExam([]);
         setSchedule([]);
         setWeekIdx(0);
         setDivType('mixed');
@@ -522,11 +580,13 @@ export default function App() {
   function logout() {
     clearSession();
     setUser(null);
-    // Completely clear all app state upon logout (Prompt requirement 1)
+    // Completely clear all app state upon logout
     setGroups([]);
     setActiveGid(null);
-    setRawText('');
-    setStudents([]);
+    setRawTextPairs('');
+    setStudentsPairs([]);
+    setRawTextExam('');
+    setStudentsExam([]);
     setSchedule([]);
     setWeekIdx(0);
     setDivType('mixed');
@@ -987,17 +1047,17 @@ export default function App() {
                   }}
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>👥 Оқушылар тізімін көру / өзгерту ({students.length})</span>
-                    {students.length > 0 && (
+                    <span>👥 Оқушылар тізімін көру / өзгерту ({studentsPairs.length})</span>
+                    {studentsPairs.length > 0 && (
                       <span style={{
                         fontSize: '10px',
-                        color: students.length % 2 !== 0 ? '#b45309' : '#15803d',
-                        background: students.length % 2 !== 0 ? '#fef3c7' : '#dcfce7',
+                        color: studentsPairs.length % 2 !== 0 ? '#b45309' : '#15803d',
+                        background: studentsPairs.length % 2 !== 0 ? '#fef3c7' : '#dcfce7',
                         padding: '1px 6px',
                         borderRadius: '999px',
                         fontWeight: 700
                       }}>
-                        {students.length % 2 !== 0 ? 'тақ ⚡' : 'жұп ✓'}
+                        {studentsPairs.length % 2 !== 0 ? 'тақ ⚡' : 'жұп ✓'}
                       </span>
                     )}
                   </span>
@@ -1025,9 +1085,9 @@ export default function App() {
                       </button>
                     </div>
                     <textarea
-                      value={rawText}
-                      onChange={e => { setRawText(e.target.value); applyText(e.target.value); }}
-                      onBlur={handleBlur}
+                      value={rawTextPairs}
+                      onChange={e => { setRawTextPairs(e.target.value); applyTextPairs(e.target.value); }}
+                      onBlur={handleBlurPairs}
                       placeholder={
                         'Тізімді кез-келген форматта қойыңыз:\n\n' +
                         'Болатұлы Нұрдәулет 87754615707\n' +
@@ -1053,6 +1113,7 @@ export default function App() {
               </div>
             </section>
 
+
             {/* 4 · Division Type */}
             <section>
               <FieldLabel>БӨЛУ ТҮРІ</FieldLabel>
@@ -1070,14 +1131,14 @@ export default function App() {
             </section>
 
             {/* 5 · Gender Manual Tagging */}
-            {divType === 'gendered' && students.length > 0 && (
+            {divType === 'gendered' && studentsPairs.length > 0 && (
               <section style={{
                 background: '#f8fafc', border: '1.5px solid #e5e7eb',
                 borderRadius: '10px', padding: '12px',
               }}>
-                <FieldLabel>ЖЫНЫС БЕЛГІСІ (басу арқылы өзгерту)</FieldLabel>
+                <FieldLabel>ЖЫНЫСЫ БЕЛГІСІ (басу арқылы өзгерту)</FieldLabel>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '150px', overflowY: 'auto' }}>
-                  {students.map(s => (
+                  {studentsPairs.map(s => (
                     <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                       <button onClick={() => toggleGender(s.id)} style={{
                         width: '26px', height: '22px', border: '1.5px solid',
@@ -1163,7 +1224,7 @@ export default function App() {
                             {g.name}
                           </div>
                           <div style={{ fontSize: '11px', color: '#64748b' }}>
-                            {g.subject ? `${g.subject} • ` : ''}{g.students?.length || 0} оқушы
+                            {g.subject ? `${g.subject} • ` : ''}{g.students_pairs?.length || 0} оқушы
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '4px', flexShrink: 0 }}>
@@ -1219,7 +1280,7 @@ export default function App() {
           }}>
 
             {/* Onboarding block for colleagues when list or group is empty */}
-            {(!activeGid || !rawText.trim() || students.length === 0) && (
+            {(!activeGid || !rawTextPairs.trim() || studentsPairs.length === 0) && (
               <div style={{
                 width: '100%', maxWidth: '1020px',
                 background: '#ffffff', border: '1.5px solid #dbeafe', borderRadius: '14px',
@@ -1320,11 +1381,11 @@ export default function App() {
           setNewSubject={setNewSubject}
           showNewGroup={showNewGroup}
           setShowNewGroup={setShowNewGroup}
-          students={students}
-          rawText={rawText}
-          setRawText={setRawText}
-          applyText={applyText}
-          handleBlur={handleBlur}
+          students={studentsExam}
+          rawText={rawTextExam}
+          setRawText={setRawTextExam}
+          applyText={applyTextExam}
+          handleBlur={handleBlurExam}
           insertDemoData={insertDemoData}
           activeGroup={activeGroup}
           onSaveGroup={handleSaveExamGroup}
