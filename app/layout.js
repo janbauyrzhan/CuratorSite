@@ -1,7 +1,12 @@
 import './globals.css';
-import { Inter } from 'next/font/google';
+import { Open_Sans } from 'next/font/google';
 
-const inter = Inter({ subsets: ['latin', 'cyrillic'], weight: ['400','500','600','700','800','900'] });
+const openSans = Open_Sans({
+  subsets: ['latin', 'cyrillic'],
+  weight: ['400', '600', '700', '800'],
+  variable: '--font-open-sans',
+  display: 'swap',
+});
 
 export const metadata = {
   title: 'infoLogia • Куратор сайты',
@@ -10,8 +15,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="kk">
-      <body className={inter.className}>{children}</body>
+    <html lang="kk" className={openSans.variable}>
+      <body className={openSans.className}>{children}</body>
     </html>
   );
 }

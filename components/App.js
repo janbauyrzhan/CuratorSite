@@ -9,14 +9,14 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Plus, Trash2, Download, Copy, LogOut, Sparkles, Users, Clock, Check, User
+  Plus, Trash2, Download, Copy, LogOut, Sparkles, Users, Clock, Check, User, ArrowLeftRight
 } from 'lucide-react';
 import AuthPanel     from './AuthPanel';
 import Poster        from './Poster';
 import ExamScheduler from './ExamScheduler';
 import {
   uid, makeSchedule, makeGenderedSchedule,
-  parseStudents, normalizeText,
+  parseStudents, normalizeText, normalizeGender,
   loadUserGroups, saveUserGroups, getSession, clearSession,
   pairsToTSV,
 } from '@/lib/utils';
@@ -162,9 +162,13 @@ export default function App() {
   const [studentsExam, setStudentsExam] = useState([]);
 
   /* ── Algorithm Settings (Pairs) ─────────────────────────── */
-  const [divType,  setDivType]  = useState('mixed');
-  const [weekIdx,  setWeekIdx]  = useState(0);
-  const [schedule, setSchedule] = useState([]);
+  const [divType,        setDivType]        = useState('mixed');
+  const [weekIdx,        setWeekIdx]        = useState(0);
+  const [schedule,       setSchedule]       = useState([]);
+  const [pairOverrides,  setPairOverrides]  = useState({});
+  const [showSwapModal,  setShowSwapModal]  = useState(false);
+  const [swapStudentA,   setSwapStudentA]   = useState('');
+  const [swapStudentB,   setSwapStudentB]   = useState('');
 
   /* ── SVG Template Content (Pairs) ───────────────────────── */
   const [svgTemplate, setSvgTemplate] = useState(RAW_SVG_TEMPLATE);
@@ -212,6 +216,7 @@ export default function App() {
           setStudentsPairs(g.students_pairs || []);
           setRawTextExam(g.rawTextExam || '');
           setStudentsExam(g.students_exam || []);
+          setPairOverrides(g.pairOverrides || {});
         }
       } else {
         // Absolutely clean state for this user (no foreign data)
@@ -222,6 +227,7 @@ export default function App() {
         setRawTextExam('');
         setStudentsExam([]);
         setSchedule([]);
+        setPairOverrides({});
         setWeekIdx(0);
       }
     } else {
@@ -233,6 +239,7 @@ export default function App() {
       setRawTextExam('');
       setStudentsExam([]);
       setSchedule([]);
+      setPairOverrides({});
       setWeekIdx(0);
     }
     setAuthLoaded(true);
@@ -268,11 +275,34 @@ export default function App() {
   /* ── Derived Variables (Pairs) ──────────────────────────── */
   const activeGroup  = groups.find(g => g.id === activeGid) || null;
   const safeWeek     = Math.min(weekIdx, Math.max(0, schedule.length - 1));
-  const currentPairs = schedule[safeWeek] || [];
+  const weekOverride = pairOverrides[safeWeek];
+  const currentPairs = (weekOverride && weekOverride.length > 0) ? weekOverride : (schedule[safeWeek] || []);
   const totalWeeks   = schedule.length;
 
   const weekText    = `${safeWeek + 1}-апта`;
   const subjectText = activeGroup?.subject || activeGroup?.name || 'Жұптық жұмыс';
+
+  /* ── Options for Student Swapping ───────────────────────── */
+  const swapOptions = useMemo(() => {
+    const list = [];
+    currentPairs.forEach((pair, rIdx) => {
+      if (pair[0] && pair[0].id !== '__bye__') {
+        list.push({
+          id: pair[0].id,
+          label: `${rIdx + 1}-жұп (1): ${pair[0].name}`,
+          name: pair[0].name,
+        });
+      }
+      if (pair[1] && pair[1].id !== '__bye__') {
+        list.push({
+          id: pair[1].id,
+          label: `${rIdx + 1}-жұп (2): ${pair[1].name}`,
+          name: pair[1].name,
+        });
+      }
+    });
+    return list;
+  }, [currentPairs]);
 
   /* ── Real-Time Dynamic SVG Generation (Pairs) ───────────── */
   const filledSvg = useMemo(() => {
@@ -293,6 +323,8 @@ export default function App() {
         subject: 'Информатика',
         rawTextPairs: DEMO_STUDENTS_TEXT,
         students_pairs: [],
+        genderMap: {},
+        pairOverrides: {},
         rawTextExam: '',
         students_exam: [],
       };
@@ -302,10 +334,13 @@ export default function App() {
     }
     setRawTextPairs(DEMO_STUDENTS_TEXT);
     const parsed = parseStudents(DEMO_STUDENTS_TEXT); // with phones for pairs
+    const gMap = {};
+    parsed.forEach(s => { gMap[s.name.trim().toLowerCase()] = normalizeGender(s.gender); });
     setStudentsPairs(parsed);
+    setPairOverrides({});
     setWeekIdx(0);
     setGroups(prev => prev.map(g => g.id === targetGid
-      ? { ...g, rawTextPairs: DEMO_STUDENTS_TEXT, students_pairs: parsed }
+      ? { ...g, rawTextPairs: DEMO_STUDENTS_TEXT, students_pairs: parsed, genderMap: gMap, pairOverrides: {} }
       : g
     ));
     notify('✨ 28 оқушының демо-үлгісі сәтті қойылды!');
@@ -320,6 +355,8 @@ export default function App() {
       subject: newSubject.trim(),
       rawTextPairs: '',
       students_pairs: [],
+      genderMap: {},
+      pairOverrides: {},
       rawTextExam: '',
       students_exam: [],
     };
@@ -331,6 +368,7 @@ export default function App() {
     setShowNewGroup(false);
     setRawTextPairs('');
     setStudentsPairs([]);
+    setPairOverrides({});
     setRawTextExam('');
     setStudentsExam([]);
     setWeekIdx(0);
@@ -348,6 +386,7 @@ export default function App() {
     setActiveGid(ng?.id || null);
     setRawTextPairs(ng?.rawTextPairs || '');
     setStudentsPairs(ng?.students_pairs || []);
+    setPairOverrides(ng?.pairOverrides || {});
     setRawTextExam(ng?.rawTextExam || '');
     setStudentsExam(ng?.students_exam || []);
     setWeekIdx(0);
@@ -365,7 +404,9 @@ export default function App() {
     setStudentsPairs(g.students_pairs || []);
     setRawTextExam(g.rawTextExam || '');
     setStudentsExam(g.students_exam || []);
+    setPairOverrides(g.pairOverrides || {});
     setWeekIdx(0);
+    setShowSwapModal(false);
   }
 
   /* ══ SAVE «ЖҰПТЫҚ ЖҰМЫС» SETTINGS ONLY ════════════════════ */
@@ -374,12 +415,20 @@ export default function App() {
       notify('Алдымен топты таңдаңыз немесе құрыңыз');
       return;
     }
+    const currentGroup = groups.find(g => g.id === activeGid);
+    const updatedMap = { ...(currentGroup?.genderMap || {}) };
+    studentsPairs.forEach(s => {
+      if (s.name) updatedMap[s.name.trim().toLowerCase()] = normalizeGender(s.gender);
+    });
+
     const updated = groups.map(g => {
       if (g.id === activeGid) {
         return {
           ...g,
           rawTextPairs,
           students_pairs: studentsPairs,
+          genderMap: updatedMap,
+          pairOverrides,
           // students_exam and rawTextExam are NOT touched here
         };
       }
@@ -437,12 +486,26 @@ export default function App() {
   /* ══ PAIRS STUDENT INPUT & PARSER ═══════════════════════════ */
   // Парсер извлекает ФИО + телефон (для жұптық жұмыс)
   function applyTextPairs(text) {
-    const parsed = parseStudents(text); // phones kept
+    const currentGroup = groups.find(g => g.id === activeGid);
+    const existingGenders = { ...(currentGroup?.genderMap || {}) };
+    studentsPairs.forEach(s => {
+      if (s.name && s.gender) {
+        existingGenders[s.name.trim().toLowerCase()] = normalizeGender(s.gender);
+      }
+    });
+
+    const parsed = parseStudents(text, { existingGenders }); // phones kept, genders preserved
     setStudentsPairs(parsed);
     setWeekIdx(0);
+    setPairOverrides({});
+
     if (activeGid) {
+      const updatedMap = { ...existingGenders };
+      parsed.forEach(s => {
+        updatedMap[s.name.trim().toLowerCase()] = normalizeGender(s.gender);
+      });
       setGroups(prev => prev.map(g => g.id === activeGid
-        ? { ...g, rawTextPairs: text, students_pairs: parsed }
+        ? { ...g, rawTextPairs: text, students_pairs: parsed, genderMap: updatedMap, pairOverrides: {} }
         : g
       ));
     }
@@ -481,14 +544,92 @@ export default function App() {
 
   function toggleGender(id) {
     setStudentsPairs(prev => {
-      const next = prev.map(s => s.id === id
-        ? { ...s, gender: s.gender === 'm' ? 'f' : s.gender === 'f' ? 'u' : 'm' }
-        : s);
+      const student = prev.find(s => s.id === id);
+      if (!student) return prev;
+      const curG = normalizeGender(student.gender);
+      const nextG = curG === 'boy' ? 'girl' : 'boy';
+
+      const next = prev.map(s => s.id === id ? { ...s, gender: nextG } : s);
+
       if (activeGid) {
-        setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, students_pairs: next } : g));
+        setGroups(gs => gs.map(g => {
+          if (g.id !== activeGid) return g;
+          const currentMap = { ...(g.genderMap || {}) };
+          currentMap[student.name.trim().toLowerCase()] = nextG;
+          return {
+            ...g,
+            students_pairs: next,
+            genderMap: currentMap,
+          };
+        }));
       }
       return next;
     });
+    notify('Оқушының жынысы ауыстырылды ✓');
+  }
+
+  /* ══ MANUAL PAIR SWAP HANDLERS ══════════════════════════════ */
+  function handleSwapStudents() {
+    if (!swapStudentA || !swapStudentB) {
+      notify('Ауыстыру үшін екі оқушыны таңдаңыз');
+      return;
+    }
+    if (swapStudentA === swapStudentB) {
+      notify('Бірдей оқушыны таңдау мүмкін емес');
+      return;
+    }
+
+    const pairsCopy = currentPairs.map(p => [...p]);
+    let posA = null;
+    let posB = null;
+
+    for (let r = 0; r < pairsCopy.length; r++) {
+      for (let c = 0; c < pairsCopy[r].length; c++) {
+        if (pairsCopy[r][c]?.id === swapStudentA) {
+          posA = { r, c };
+        }
+        if (pairsCopy[r][c]?.id === swapStudentB) {
+          posB = { r, c };
+        }
+      }
+    }
+
+    if (!posA || !posB) {
+      notify('Таңдалған оқушылар табылған жоқ');
+      return;
+    }
+
+    const temp = pairsCopy[posA.r][posA.c];
+    pairsCopy[posA.r][posA.c] = pairsCopy[posB.r][posB.c];
+    pairsCopy[posB.r][posB.c] = temp;
+
+    const nextOverrides = {
+      ...pairOverrides,
+      [safeWeek]: pairsCopy,
+    };
+    setPairOverrides(nextOverrides);
+
+    if (activeGid) {
+      setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, pairOverrides: nextOverrides } : g));
+    }
+
+    const nameA = temp.name;
+    const nameB = pairsCopy[posA.r][posA.c]?.name;
+    setSwapStudentA('');
+    setSwapStudentB('');
+    notify(`✓ ${nameA} және ${nameB} орындары ауыстырылды!`);
+  }
+
+  function handleResetWeekSwaps() {
+    const nextOverrides = { ...pairOverrides };
+    delete nextOverrides[safeWeek];
+    setPairOverrides(nextOverrides);
+    if (activeGid) {
+      setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, pairOverrides: nextOverrides } : g));
+    }
+    setSwapStudentA('');
+    setSwapStudentB('');
+    notify(`${safeWeek + 1}-апта бастапқы алгоритмге қайтарылды ✓`);
   }
 
   /* ══ EXPORT ACTIONS (Pairs) ═════════════════════════════════ */
@@ -560,6 +701,7 @@ export default function App() {
           setStudentsPairs(g.students_pairs || []);
           setRawTextExam(g.rawTextExam || '');
           setStudentsExam(g.students_exam || []);
+          setPairOverrides(g.pairOverrides || {});
         }
       } else {
         // Absolutely clean state for a new curator
@@ -570,6 +712,7 @@ export default function App() {
         setRawTextExam('');
         setStudentsExam([]);
         setSchedule([]);
+        setPairOverrides({});
         setWeekIdx(0);
         setDivType('mixed');
       }
@@ -588,6 +731,7 @@ export default function App() {
     setRawTextExam('');
     setStudentsExam([]);
     setSchedule([]);
+    setPairOverrides({});
     setWeekIdx(0);
     setDivType('mixed');
     setNewName('');
@@ -1024,7 +1168,7 @@ export default function App() {
               )}
             </section>
 
-            {/* 3 · Student List (Accordion) */}
+            {/* 3 · Student List (Accordion with Gender Badges) */}
             <section>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 <button
@@ -1067,7 +1211,7 @@ export default function App() {
                 </button>
 
                 {showStudentList && (
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
                       <button
                         type="button"
@@ -1097,7 +1241,7 @@ export default function App() {
                         'Немесе «Үлгіні қою» батырмасын басыңыз!'
                       }
                       style={{
-                        width: '100%', minHeight: '160px',
+                        width: '100%', minHeight: '140px',
                         border: '1.5px solid #e5e7eb', borderRadius: '8px',
                         padding: '10px 12px', fontSize: '12px', color: '#111827',
                         background: '#fff', fontFamily: 'monospace',
@@ -1105,59 +1249,116 @@ export default function App() {
                       }}
                       onFocus={e => e.target.style.borderColor = BRAND}
                     />
-                    <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: '3px', lineHeight: 1.5 }}>
-                      Сплошной мәтінді де автоматты таниды. Поледен шыққанда тізім автоматты реттеледі.
-                    </div>
+
+                    {/* Student List with One-Click Gender Toggle Badges (Requirement 2) */}
+                    {studentsPairs.length > 0 && (
+                      <div style={{
+                        marginTop: '4px', background: '#f8fafc',
+                        border: '1.5px solid #e2e8f0', borderRadius: '10px',
+                        padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: '8px'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                          <span style={{ fontSize: '11px', fontWeight: 800, color: '#475569', letterSpacing: '.04em' }}>
+                            ЖЫНЫСЫ БЕЛГІСІ ({studentsPairs.length} ОҚУШЫ)
+                          </span>
+                          <div style={{ display: 'flex', gap: '6px', fontSize: '11px', fontWeight: 700 }}>
+                            <span style={{ color: '#1d4ed8', background: '#eff6ff', padding: '1px 6px', borderRadius: '4px', border: '1px solid #bfdbfe' }}>
+                              👦 {studentsPairs.filter(s => normalizeGender(s.gender) === 'boy').length} ұл
+                            </span>
+                            <span style={{ color: '#be185d', background: '#fdf2f8', padding: '1px 6px', borderRadius: '4px', border: '1px solid #fbcfe8' }}>
+                              👧 {studentsPairs.filter(s => normalizeGender(s.gender) === 'girl').length} қыз
+                            </span>
+                          </div>
+                        </div>
+
+                        <div style={{ fontSize: '11px', color: '#64748b' }}>
+                          Ауыстыру үшін бейджикті басыңыз (автоматты сақталады):
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '180px', overflowY: 'auto' }}>
+                          {studentsPairs.map((s, idx) => {
+                            const g = normalizeGender(s.gender);
+                            return (
+                              <div
+                                key={s.id}
+                                style={{
+                                  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+                                  padding: '5px 8px', borderRadius: '6px', background: '#ffffff',
+                                  border: '1px solid #e2e8f0', fontSize: '12px',
+                                }}
+                              >
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0, flex: 1, marginRight: '8px' }}>
+                                  <span style={{ color: '#94a3b8', fontSize: '11px', width: '18px', flexShrink: 0 }}>{idx + 1}.</span>
+                                  <span style={{ fontWeight: 600, color: '#1e293b', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                    {s.name}
+                                  </span>
+                                </div>
+                                <button
+                                  type="button"
+                                  onClick={() => toggleGender(s.id)}
+                                  title="Басу арқылы ауыстыру: 👦 Ұл / 👧 Қыз"
+                                  style={{
+                                    display: 'inline-flex', alignItems: 'center', gap: '3px',
+                                    padding: '3px 8px', borderRadius: '6px', border: '1px solid',
+                                    cursor: 'pointer', fontSize: '11.5px', fontWeight: 800,
+                                    transition: 'all .12s', flexShrink: 0,
+                                    background: g === 'boy' ? '#eff6ff' : g === 'girl' ? '#fdf2f8' : '#f8fafc',
+                                    borderColor: g === 'boy' ? '#93c5fd' : g === 'girl' ? '#f472b6' : '#cbd5e1',
+                                    color: g === 'boy' ? '#1d4ed8' : g === 'girl' ? '#be185d' : '#64748b',
+                                  }}
+                                >
+                                  {g === 'boy' ? '👦 Ұл' : g === 'girl' ? '👧 Қыз' : '❓ Белгісіз'}
+                                </button>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
             </section>
 
-
-            {/* 4 · Division Type */}
+            {/* 4 · Division Type (Requirement 3) */}
             <section>
-              <FieldLabel>БӨЛУ ТҮРІ</FieldLabel>
-              <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '10px', padding: '3px', gap: '2px' }}>
-                {[['mixed', '🔀 Бәрі аралас'], ['gendered', '👫 Жынысы бойынша']].map(([v, l]) => (
-                  <button key={v} onClick={() => setDivType(v)} style={{
-                    flex: 1, padding: '8px 4px', borderRadius: '8px', border: 'none',
-                    cursor: 'pointer', fontSize: '12px', fontWeight: 700, transition: 'all .15s',
-                    background: divType === v ? '#fff' : 'transparent',
-                    color: divType === v ? BRAND : '#6b7280',
-                    boxShadow: divType === v ? '0 1px 4px rgba(0,0,0,.08)' : 'none',
-                  }}>{l}</button>
-                ))}
+              <FieldLabel>БӨЛУ РЕЖИМІ</FieldLabel>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '10px', padding: '3px', gap: '2px' }}>
+                  <button
+                    type="button"
+                    onClick={() => setDivType('mixed')}
+                    style={{
+                      flex: 1, padding: '8px 4px', borderRadius: '8px', border: 'none',
+                      cursor: 'pointer', fontSize: '12px', fontWeight: 700, transition: 'all .15s',
+                      background: divType === 'mixed' ? '#fff' : 'transparent',
+                      color: divType === 'mixed' ? BRAND : '#6b7280',
+                      boxShadow: divType === 'mixed' ? '0 1px 4px rgba(0,0,0,.08)' : 'none',
+                    }}
+                  >
+                    🔀 Бәрі аралас
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDivType('gendered')}
+                    style={{
+                      flex: 1, padding: '8px 4px', borderRadius: '8px', border: 'none',
+                      cursor: 'pointer', fontSize: '12px', fontWeight: 700, transition: 'all .15s',
+                      background: divType === 'gendered' ? '#fff' : 'transparent',
+                      color: divType === 'gendered' ? BRAND : '#6b7280',
+                      boxShadow: divType === 'gendered' ? '0 1px 4px rgba(0,0,0,.08)' : 'none',
+                    }}
+                  >
+                    👫 Тек бір жынысты жұптар
+                  </button>
+                </div>
+                <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.4 }}>
+                  {divType === 'gendered'
+                    ? '✓ Ұлдар тек ұлдармен, қыздар тек қыздармен жұптасады. Тақ қалған ұл мен қыз өзара бірігеді.'
+                    : '✓ 16 апталық карусель: барлық оқушылар қайталанбайтын жұптарға бөлінеді.'}
+                </div>
               </div>
             </section>
-
-            {/* 5 · Gender Manual Tagging */}
-            {divType === 'gendered' && studentsPairs.length > 0 && (
-              <section style={{
-                background: '#f8fafc', border: '1.5px solid #e5e7eb',
-                borderRadius: '10px', padding: '12px',
-              }}>
-                <FieldLabel>ЖЫНЫСЫ БЕЛГІСІ (басу арқылы өзгерту)</FieldLabel>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '4px', maxHeight: '150px', overflowY: 'auto' }}>
-                  {studentsPairs.map(s => (
-                    <div key={s.id} style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                      <button onClick={() => toggleGender(s.id)} style={{
-                        width: '26px', height: '22px', border: '1.5px solid',
-                        borderRadius: '5px', cursor: 'pointer', fontSize: '12px', fontWeight: 800,
-                        flexShrink: 0, transition: 'all .12s',
-                        background: s.gender === 'm' ? '#eff6ff' : s.gender === 'f' ? '#fdf2f8' : '#f9fafb',
-                        borderColor: s.gender === 'm' ? '#93c5fd' : s.gender === 'f' ? '#f9a8d4' : '#e5e7eb',
-                        color: s.gender === 'm' ? BRAND : s.gender === 'f' ? '#db2777' : '#9ca3af',
-                      }}>
-                        {s.gender === 'm' ? '♂' : s.gender === 'f' ? '♀' : '?'}
-                      </button>
-                      <span style={{ fontSize: '12px', color: '#374151', fontWeight: 600, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {s.name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </section>
-            )}
 
             {/* 6 · Week Selector Buttons (1 to 16) */}
             {totalWeeks > 0 && (
@@ -1329,6 +1530,20 @@ export default function App() {
                 <Copy size={14} />Тізімді көшіру (Excel)
               </Btn>
 
+              {/* 4. Manual Pair Adjustment / Swap Toggle Button */}
+              <Btn
+                variant="ghost"
+                onClick={() => setShowSwapModal(v => !v)}
+                sx={{
+                  background: showSwapModal ? '#eef1fb' : '#ffffff',
+                  borderColor: showSwapModal ? BRAND : '#e5e7eb',
+                  color: showSwapModal ? BRAND : '#374151',
+                  fontWeight: 700,
+                }}
+              >
+                <ArrowLeftRight size={14} /> Жұптарды өзгерту / Своп {pairOverrides[safeWeek] ? '⚡' : ''}
+              </Btn>
+
               <div style={{ flex: 1 }} />
 
               {/* Week navigation arrows */}
@@ -1360,6 +1575,249 @@ export default function App() {
                 </div>
               )}
             </div>
+
+            {/* Manual Swap Panel */}
+            {showSwapModal && (
+              <div style={{
+                width: '100%', maxWidth: '1020px',
+                background: '#ffffff', border: '1.5px solid #c7d2fe', borderRadius: '14px',
+                padding: '16px 20px',
+                boxShadow: '0 4px 16px rgba(29,53,151,0.08)',
+                display: 'flex', flexDirection: 'column', gap: '14px'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                    <div style={{
+                      width: '32px', height: '32px', borderRadius: '8px',
+                      background: '#eef1fb', color: BRAND, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                    }}>
+                      <ArrowLeftRight size={16} />
+                    </div>
+                    <div>
+                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#111827' }}>
+                        {safeWeek + 1}-аптадағы жұптарды қолмен реттеу (Своп)
+                      </div>
+                      <div style={{ fontSize: '12px', color: '#6b7280' }}>
+                        Кез келген екі оқушыны таңдап, орындарын бірден ауыстырыңыз. Постер мен тізім лезде жаңарады.
+                      </div>
+                    </div>
+                  </div>
+
+                  {pairOverrides[safeWeek] && (
+                    <button
+                      type="button"
+                      onClick={handleResetWeekSwaps}
+                      style={{
+                        padding: '6px 12px',
+                        background: '#fef2f2',
+                        border: '1px solid #fecaca',
+                        borderRadius: '7px',
+                        color: '#dc2626',
+                        fontSize: '12px',
+                        fontWeight: 700,
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '5px'
+                      }}
+                    >
+                      ↺ Бастапқы алгоритмге қайтару
+                    </button>
+                  )}
+                </div>
+
+                {/* Selectors and Action */}
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
+                  gap: '12px',
+                  alignItems: 'end',
+                  background: '#f8fafc',
+                  padding: '12px 14px',
+                  borderRadius: '10px',
+                  border: '1px solid #e2e8f0'
+                }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#4b5563', marginBottom: '4px' }}>
+                      1-ОҚУШЫНЫ ТАҢДАҢЫЗ:
+                    </label>
+                    <select
+                      value={swapStudentA}
+                      onChange={e => setSwapStudentA(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        borderRadius: '7px',
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: '#1e293b',
+                        background: '#ffffff',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="">-- Бірінші оқушыны таңдаңыз --</option>
+                      {swapOptions.map(opt => (
+                        <option key={`a-${opt.id}`} value={opt.id} disabled={opt.id === swapStudentB}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#4b5563', marginBottom: '4px' }}>
+                      2-ОҚУШЫНЫ ТАҢДАҢЫЗ:
+                    </label>
+                    <select
+                      value={swapStudentB}
+                      onChange={e => setSwapStudentB(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '8px 10px',
+                        borderRadius: '7px',
+                        border: '1.5px solid #cbd5e1',
+                        fontSize: '13px',
+                        fontWeight: 600,
+                        color: '#1e293b',
+                        background: '#ffffff',
+                        outline: 'none'
+                      }}
+                    >
+                      <option value="">-- Екінші оқушыны таңдаңыз --</option>
+                      {swapOptions.map(opt => (
+                        <option key={`b-${opt.id}`} value={opt.id} disabled={opt.id === swapStudentA}>
+                          {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleSwapStudents}
+                    disabled={!swapStudentA || !swapStudentB || swapStudentA === swapStudentB}
+                    style={{
+                      height: '38px',
+                      padding: '0 18px',
+                      background: (!swapStudentA || !swapStudentB || swapStudentA === swapStudentB) ? '#94a3b8' : BRAND,
+                      color: '#ffffff',
+                      border: 'none',
+                      borderRadius: '7px',
+                      fontSize: '13px',
+                      fontWeight: 800,
+                      cursor: (!swapStudentA || !swapStudentB || swapStudentA === swapStudentB) ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      gap: '8px',
+                      transition: 'background 0.15s ease'
+                    }}
+                  >
+                    <ArrowLeftRight size={15} /> Орындарын ауыстыру (Своп)
+                  </button>
+                </div>
+
+                {/* Quick Interactive Pairs Overview */}
+                <div>
+                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
+                    Ағымдағы жұптар (жылдам таңдау үшін оқушыны басыңыз):
+                  </div>
+                  <div style={{
+                    display: 'grid',
+                    gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
+                    gap: '8px',
+                    maxHeight: '220px',
+                    overflowY: 'auto',
+                    padding: '2px'
+                  }}>
+                    {currentPairs.map((pair, pIdx) => {
+                      const s1 = pair[0];
+                      const s2 = pair[1];
+                      const isBye1 = !s1 || s1.id === '__bye__';
+                      const isBye2 = !s2 || s2.id === '__bye__';
+
+                      const isSelected1 = s1 && (swapStudentA === s1.id || swapStudentB === s1.id);
+                      const isSelected2 = s2 && (swapStudentA === s2.id || swapStudentB === s2.id);
+
+                      const selectClick = (id) => {
+                        if (!id || id === '__bye__') return;
+                        if (!swapStudentA) {
+                          setSwapStudentA(id);
+                        } else if (!swapStudentB && swapStudentA !== id) {
+                          setSwapStudentB(id);
+                        } else if (swapStudentA === id) {
+                          setSwapStudentA('');
+                        } else if (swapStudentB === id) {
+                          setSwapStudentB('');
+                        } else {
+                          setSwapStudentB(id);
+                        }
+                      };
+
+                      return (
+                        <div
+                          key={`pair-box-${pIdx}`}
+                          style={{
+                            background: '#f8fafc',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            padding: '6px 8px',
+                            fontSize: '11px',
+                          }}
+                        >
+                          <div style={{ fontWeight: 800, color: BRAND, marginBottom: '4px', fontSize: '10px' }}>
+                            {pIdx + 1}-ЖҰП
+                          </div>
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                            <div
+                              onClick={() => !isBye1 && selectClick(s1.id)}
+                              style={{
+                                padding: '3px 6px',
+                                borderRadius: '4px',
+                                background: isSelected1 ? '#dbeafe' : '#ffffff',
+                                border: isSelected1 ? `1.5px solid ${BRAND}` : '1px solid #e2e8f0',
+                                fontWeight: isSelected1 ? 800 : 600,
+                                color: isBye1 ? '#94a3b8' : '#1e293b',
+                                cursor: isBye1 ? 'default' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                              }}
+                            >
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {isBye1 ? '—' : `${s1.gender === 'girl' ? '👧' : '👦'} ${s1.name}`}
+                              </span>
+                              {isSelected1 && <span style={{ fontSize: '9px', color: BRAND, fontWeight: 900 }}>✓</span>}
+                            </div>
+                            <div
+                              onClick={() => !isBye2 && selectClick(s2.id)}
+                              style={{
+                                padding: '3px 6px',
+                                borderRadius: '4px',
+                                background: isSelected2 ? '#dbeafe' : '#ffffff',
+                                border: isSelected2 ? `1.5px solid ${BRAND}` : '1px solid #e2e8f0',
+                                fontWeight: isSelected2 ? 800 : 600,
+                                color: isBye2 ? '#94a3b8' : '#1e293b',
+                                cursor: isBye2 ? 'default' : 'pointer',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                              }}
+                            >
+                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                                {isBye2 ? '—' : `${s2.gender === 'girl' ? '👧' : '👦'} ${s2.name}`}
+                              </span>
+                              {isSelected2 && <span style={{ fontSize: '9px', color: BRAND, fontWeight: 900 }}>✓</span>}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* SVG Live Poster Preview */}
             <div style={{ width: '100%', maxWidth: '1020px', display: 'flex', flexDirection: 'column', gap: '10px' }}>

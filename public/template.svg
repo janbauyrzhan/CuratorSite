@@ -1,10 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1702 988" width="1702" height="988" style="width: 100%; height: auto; display: block;">
   <defs>
     <style>
-      .badge-week { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 800; fill: #ffffff; text-anchor: middle; dominant-baseline: central; font-size: 24px; letter-spacing: 0.5px; }
-      .badge-subj { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 800; fill: #ffffff; text-anchor: middle; dominant-baseline: central; font-size: 21px; letter-spacing: 0.5px; }
-      .name-txt   { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 700; fill: #111827; dominant-baseline: central; font-size: 16px; }
-      .phone-txt  { font-family: 'Inter', -apple-system, BlinkMacSystemFont, monospace; font-weight: 600; fill: #4b5563; dominant-baseline: central; font-size: 15px; }
+      @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&amp;display=swap');
+      .badge-week { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 800; fill: #ffffff; text-anchor: middle; dominant-baseline: central; font-size: 24px; letter-spacing: 0.5px; }
+      .badge-subj { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 800; fill: #ffffff; text-anchor: middle; dominant-baseline: central; font-size: 21px; letter-spacing: 0.5px; }
+      .name-txt   { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 700; fill: #111827; dominant-baseline: central; font-size: 16px; }
+      .phone-txt  { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, monospace; font-weight: 600; fill: #4b5563; dominant-baseline: central; font-size: 15px; }
     </style>
   </defs>
 

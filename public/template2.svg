@@ -1,10 +1,11 @@
 <svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" viewBox="0 0 1828 841" width="1828" height="841" style="width: 100%; height: auto; display: block;">
   <defs>
     <style>
-      .t2-week  { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 800; fill: #ffffff; text-anchor: middle; dominant-baseline: central; font-size: 24px; letter-spacing: 0.5px; }
-      .t2-date  { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 800; fill: #ffffff; text-anchor: middle; dominant-baseline: central; font-size: 21px; letter-spacing: 0.5px; }
-      .t2-name  { font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 600; fill: #0f172a; text-anchor: middle; dominant-baseline: central; font-size: 17px; }
-      .t2-time  { font-family: 'Inter', monospace, sans-serif; font-weight: 800; fill: #1f2937; text-anchor: middle; dominant-baseline: central; font-size: 18px; letter-spacing: 0.5px; }
+      @import url('https://fonts.googleapis.com/css2?family=Open+Sans:wght@400;600;700;800&amp;display=swap');
+      .t2-week  { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 800; fill: #ffffff; text-anchor: middle; dominant-baseline: central; font-size: 24px; letter-spacing: 0.5px; }
+      .t2-date  { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 800; fill: #ffffff; text-anchor: middle; dominant-baseline: central; font-size: 21px; letter-spacing: 0.5px; }
+      .t2-name  { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 600; fill: #0f172a; text-anchor: middle; dominant-baseline: central; font-size: 17px; }
+      .t2-time  { font-family: 'Open Sans', monospace, sans-serif; font-weight: 800; fill: #1f2937; text-anchor: middle; dominant-baseline: central; font-size: 18px; letter-spacing: 0.5px; }
     </style>
   </defs>
 
