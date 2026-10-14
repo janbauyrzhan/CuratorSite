@@ -620,6 +620,73 @@ export default function App() {
     notify(`✓ ${nameA} және ${nameB} орындары ауыстырылды!`);
   }
 
+  function handlePairTogether() {
+    if (!swapStudentA || !swapStudentB) {
+      notify('Бір жұпқа қою үшін екі оқушыны таңдаңыз');
+      return;
+    }
+    if (swapStudentA === swapStudentB) {
+      notify('Бірдей оқушыны таңдау мүмкін емес');
+      return;
+    }
+
+    const pairsCopy = currentPairs.map(p => [...p]);
+    let posA = null;
+    let posB = null;
+
+    for (let r = 0; r < pairsCopy.length; r++) {
+      for (let c = 0; c < pairsCopy[r].length; c++) {
+        if (pairsCopy[r][c]?.id === swapStudentA) posA = { r, c };
+        if (pairsCopy[r][c]?.id === swapStudentB) posB = { r, c };
+      }
+    }
+
+    if (!posA || !posB) {
+      notify('Таңдалған оқушылар табылған жоқ');
+      return;
+    }
+
+    if (posA.r === posB.r) {
+      notify('Бұл екі оқушы қазірдің өзінде бір жұпта!');
+      return;
+    }
+
+    const studentA = pairsCopy[posA.r][posA.c];
+    const partnerA = pairsCopy[posA.r][1 - posA.c] || null;
+    const studentB = pairsCopy[posB.r][posB.c];
+    const partnerB = pairsCopy[posB.r][1 - posB.c] || null;
+
+    // Put studentA and studentB together into target row posA.r
+    pairsCopy[posA.r] = [studentA, studentB];
+
+    // Put their former partners into posB.r
+    if (partnerA && partnerB) {
+      pairsCopy[posB.r] = [partnerA, partnerB];
+    } else if (partnerA) {
+      pairsCopy[posB.r] = [partnerA];
+    } else if (partnerB) {
+      pairsCopy[posB.r] = [partnerB];
+    } else {
+      pairsCopy[posB.r] = [];
+    }
+
+    const nextOverrides = {
+      ...pairOverrides,
+      [safeWeek]: pairsCopy,
+    };
+    setPairOverrides(nextOverrides);
+
+    if (activeGid) {
+      setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, pairOverrides: nextOverrides } : g));
+    }
+
+    const nameA = studentA.name;
+    const nameB = studentB.name;
+    setSwapStudentA('');
+    setSwapStudentB('');
+    notify(`✓ ${nameA} және ${nameB} осы аптада бір жұпқа қойылды!`);
+  }
+
   function handleResetWeekSwaps() {
     const nextOverrides = { ...pairOverrides };
     delete nextOverrides[safeWeek];
@@ -1536,12 +1603,12 @@ export default function App() {
                 onClick={() => setShowSwapModal(v => !v)}
                 sx={{
                   background: showSwapModal ? '#eef1fb' : '#ffffff',
-                  borderColor: showSwapModal ? BRAND : '#e5e7eb',
-                  color: showSwapModal ? BRAND : '#374151',
+                  borderColor: showSwapModal ? BRAND : (pairOverrides[safeWeek] ? '#f59e0b' : '#e5e7eb'),
+                  color: showSwapModal ? BRAND : (pairOverrides[safeWeek] ? '#b45309' : '#374151'),
                   fontWeight: 700,
                 }}
               >
-                <ArrowLeftRight size={14} /> Жұптарды өзгерту / Своп {pairOverrides[safeWeek] ? '⚡' : ''}
+                <ArrowLeftRight size={14} /> ✍️ Осы аптадағы жұптарды өзгерту / Своп {pairOverrides[safeWeek] ? '⚡ (Өзгертілген)' : ''}
               </Btn>
 
               <div style={{ flex: 1 }} />
@@ -1693,29 +1760,61 @@ export default function App() {
                     </select>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={handleSwapStudents}
-                    disabled={!swapStudentA || !swapStudentB || swapStudentA === swapStudentB}
-                    style={{
-                      height: '38px',
-                      padding: '0 18px',
-                      background: (!swapStudentA || !swapStudentB || swapStudentA === swapStudentB) ? '#94a3b8' : BRAND,
-                      color: '#ffffff',
-                      border: 'none',
-                      borderRadius: '7px',
-                      fontSize: '13px',
-                      fontWeight: 800,
-                      cursor: (!swapStudentA || !swapStudentB || swapStudentA === swapStudentB) ? 'not-allowed' : 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      gap: '8px',
-                      transition: 'background 0.15s ease'
-                    }}
-                  >
-                    <ArrowLeftRight size={15} /> Орындарын ауыстыру (Своп)
-                  </button>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <button
+                      type="button"
+                      onClick={handlePairTogether}
+                      disabled={!swapStudentA || !swapStudentB || swapStudentA === swapStudentB}
+                      title="Таңдалған екі оқушыны бір жұпқа қою (қалған серіктестері бір-бірімен жұптасады)"
+                      style={{
+                        height: '38px',
+                        padding: '0 16px',
+                        background: (!swapStudentA || !swapStudentB || swapStudentA === swapStudentB) ? '#94a3b8' : '#059669',
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '7px',
+                        fontSize: '13px',
+                        fontWeight: 800,
+                        cursor: (!swapStudentA || !swapStudentB || swapStudentA === swapStudentB) ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        transition: 'background 0.15s ease'
+                      }}
+                    >
+                      🤝 Бір жұпқа қою (Бірге)
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleSwapStudents}
+                      disabled={!swapStudentA || !swapStudentB || swapStudentA === swapStudentB}
+                      title="Таңдалған екі оқушының орындарын ауыстыру"
+                      style={{
+                        height: '38px',
+                        padding: '0 16px',
+                        background: (!swapStudentA || !swapStudentB || swapStudentA === swapStudentB) ? '#94a3b8' : BRAND,
+                        color: '#ffffff',
+                        border: 'none',
+                        borderRadius: '7px',
+                        fontSize: '13px',
+                        fontWeight: 800,
+                        cursor: (!swapStudentA || !swapStudentB || swapStudentA === swapStudentB) ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '6px',
+                        transition: 'background 0.15s ease'
+                      }}
+                    >
+                      <ArrowLeftRight size={15} /> Орындарын ауыстыру (Своп)
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '6px 10px', borderRadius: '6px' }}>
+                  💡 <b>Маңызды:</b> Бұл түзетулер <b>ТЕК ОСЫ АПТАҒА ({safeWeek + 1}-апта)</b> сақталады. Басқа апталар өзгермейді және жалпы алгоритм бұзылмайды.
                 </div>
 
                 {/* Quick Interactive Pairs Overview */}
