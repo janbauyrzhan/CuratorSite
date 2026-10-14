@@ -6,6 +6,7 @@
       .badge-subj { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 800; fill: #ffffff; text-anchor: middle; dominant-baseline: central; font-size: 21px; letter-spacing: 0.5px; }
       .name-txt   { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 700; fill: #111827; dominant-baseline: central; font-size: 16px; }
       .phone-txt  { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, monospace; font-weight: 600; fill: #4b5563; dominant-baseline: central; font-size: 15px; }
+      .row-num    { font-family: 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif; font-weight: 700; fill: #111827; text-anchor: middle; dominant-baseline: central; font-size: 16px; }
     </style>
   </defs>
 
