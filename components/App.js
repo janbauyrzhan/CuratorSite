@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Plus, Trash2, Download, Copy, LogOut, Sparkles, Users, Clock, Check, User, ArrowLeftRight
+  Plus, Trash2, Download, Copy, LogOut, Sparkles, Users, Clock, Check, User, ArrowLeftRight, Shuffle
 } from 'lucide-react';
 import AuthPanel     from './AuthPanel';
 import Poster        from './Poster';
@@ -154,8 +154,9 @@ export default function App() {
   const [newSubject,   setNewSubject]   = useState('');
 
   /* ── «Жұптық жұмыс» Student Data (ФИО + телефон) ───────── */
-  const [rawTextPairs,  setRawTextPairs]  = useState('');
-  const [studentsPairs, setStudentsPairs] = useState([]);
+  const [rawTextPairs,     setRawTextPairs]     = useState('');
+  const [studentsPairs,    setStudentsPairs]    = useState([]);
+  const [customPairsOrder, setCustomPairsOrder] = useState(null);
 
   /* ── «Сабақ тапсыру» Student Data (ТОЛЬКО ФИО) ──────────── */
   const [rawTextExam,  setRawTextExam]  = useState('');
@@ -214,6 +215,7 @@ export default function App() {
           // Load INDEPENDENT student lists for each tab
           setRawTextPairs(g.rawTextPairs || '');
           setStudentsPairs(g.students_pairs || []);
+          setCustomPairsOrder(g.customPairsOrder || null);
           setRawTextExam(g.rawTextExam || '');
           setStudentsExam(g.students_exam || []);
           setPairOverrides(g.pairOverrides || {});
@@ -224,6 +226,7 @@ export default function App() {
         setActiveGid(null);
         setRawTextPairs('');
         setStudentsPairs([]);
+        setCustomPairsOrder(null);
         setRawTextExam('');
         setStudentsExam([]);
         setSchedule([]);
@@ -236,6 +239,7 @@ export default function App() {
       setActiveGid(null);
       setRawTextPairs('');
       setStudentsPairs([]);
+      setCustomPairsOrder(null);
       setRawTextExam('');
       setStudentsExam([]);
       setSchedule([]);
@@ -257,20 +261,28 @@ export default function App() {
   }, [user, groups, activeGid, weekIdx, divType, authLoaded]);
 
   /* ── Rebuild Schedule when Pairs Students or Division Mode Changes */
+  const orderedStudentsPairs = useMemo(() => {
+    if (!customPairsOrder || customPairsOrder.length === 0) return studentsPairs;
+    const map = new Map(studentsPairs.map(s => [s.id, s]));
+    const ordered = customPairsOrder.map(id => map.get(id)).filter(Boolean);
+    const remaining = studentsPairs.filter(s => !customPairsOrder.includes(s.id));
+    return [...ordered, ...remaining];
+  }, [studentsPairs, customPairsOrder]);
+
   useEffect(() => {
-    if (studentsPairs.length < 2) {
-      if (studentsPairs.length === 1) {
-        setSchedule([[[studentsPairs[0]]]]);
+    if (orderedStudentsPairs.length < 2) {
+      if (orderedStudentsPairs.length === 1) {
+        setSchedule([[[orderedStudentsPairs[0]]]]);
       } else {
         setSchedule([]);
       }
       return;
     }
-    const raw = divType === 'gendered' ? makeGenderedSchedule(studentsPairs) : makeSchedule(studentsPairs);
+    const raw = divType === 'gendered' ? makeGenderedSchedule(orderedStudentsPairs) : makeSchedule(orderedStudentsPairs);
     const capped = raw.slice(0, MAX_WEEKS);
     setSchedule(capped);
     setWeekIdx(prev => Math.min(prev, Math.max(0, capped.length - 1)));
-  }, [studentsPairs, divType]);
+  }, [orderedStudentsPairs, divType]);
 
   /* ── Derived Variables (Pairs) ──────────────────────────── */
   const activeGroup  = groups.find(g => g.id === activeGid) || null;
@@ -323,6 +335,7 @@ export default function App() {
         subject: 'Информатика',
         rawTextPairs: DEMO_STUDENTS_TEXT,
         students_pairs: [],
+        customPairsOrder: null,
         genderMap: {},
         pairOverrides: {},
         rawTextExam: '',
@@ -337,10 +350,11 @@ export default function App() {
     const gMap = {};
     parsed.forEach(s => { gMap[s.name.trim().toLowerCase()] = normalizeGender(s.gender); });
     setStudentsPairs(parsed);
+    setCustomPairsOrder(null);
     setPairOverrides({});
     setWeekIdx(0);
     setGroups(prev => prev.map(g => g.id === targetGid
-      ? { ...g, rawTextPairs: DEMO_STUDENTS_TEXT, students_pairs: parsed, genderMap: gMap, pairOverrides: {} }
+      ? { ...g, rawTextPairs: DEMO_STUDENTS_TEXT, students_pairs: parsed, customPairsOrder: null, genderMap: gMap, pairOverrides: {} }
       : g
     ));
     notify('✨ 28 оқушының демо-үлгісі сәтті қойылды!');
@@ -355,6 +369,7 @@ export default function App() {
       subject: newSubject.trim(),
       rawTextPairs: '',
       students_pairs: [],
+      customPairsOrder: null,
       genderMap: {},
       pairOverrides: {},
       rawTextExam: '',
@@ -368,6 +383,7 @@ export default function App() {
     setShowNewGroup(false);
     setRawTextPairs('');
     setStudentsPairs([]);
+    setCustomPairsOrder(null);
     setPairOverrides({});
     setRawTextExam('');
     setStudentsExam([]);
@@ -402,6 +418,7 @@ export default function App() {
     // Load INDEPENDENT lists for each tab
     setRawTextPairs(g.rawTextPairs || '');
     setStudentsPairs(g.students_pairs || []);
+    setCustomPairsOrder(g.customPairsOrder || null);
     setRawTextExam(g.rawTextExam || '');
     setStudentsExam(g.students_exam || []);
     setPairOverrides(g.pairOverrides || {});
@@ -426,7 +443,8 @@ export default function App() {
         return {
           ...g,
           rawTextPairs,
-          students_pairs: studentsPairs,
+          students_pairs: orderedStudentsPairs,
+          customPairsOrder: customPairsOrder || null,
           genderMap: updatedMap,
           pairOverrides,
           // students_exam and rawTextExam are NOT touched here
@@ -496,6 +514,7 @@ export default function App() {
 
     const parsed = parseStudents(text, { existingGenders }); // phones kept, genders preserved
     setStudentsPairs(parsed);
+    setCustomPairsOrder(null);
     setWeekIdx(0);
     setPairOverrides({});
 
@@ -505,7 +524,7 @@ export default function App() {
         updatedMap[s.name.trim().toLowerCase()] = normalizeGender(s.gender);
       });
       setGroups(prev => prev.map(g => g.id === activeGid
-        ? { ...g, rawTextPairs: text, students_pairs: parsed, genderMap: updatedMap, pairOverrides: {} }
+        ? { ...g, rawTextPairs: text, students_pairs: parsed, customPairsOrder: null, genderMap: updatedMap, pairOverrides: {} }
         : g
       ));
     }
@@ -567,6 +586,30 @@ export default function App() {
     });
     notify('Оқушының жынысы ауыстырылды ✓');
   }
+
+  /* ── Shuffle Action (Pairs) ─────────────────────────────── */
+  const shufflePairsStudents = useCallback(() => {
+    if (!studentsPairs || studentsPairs.length === 0) {
+      notify('Оқушылар тізімі бос');
+      return;
+    }
+    const shuffled = [...studentsPairs].sort(() => Math.random() - 0.5).map(s => s.id);
+    setCustomPairsOrder(shuffled);
+    setPairOverrides({});
+    if (activeGid) {
+      setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, customPairsOrder: shuffled, pairOverrides: {} } : g));
+    }
+    notify('🎲 Оқушылар кездейсоқ ретпен қайта бөлінді!');
+  }, [studentsPairs, activeGid, notify]);
+
+  const resetPairsOrder = useCallback(() => {
+    setCustomPairsOrder(null);
+    setPairOverrides({});
+    if (activeGid) {
+      setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, customPairsOrder: null, pairOverrides: {} } : g));
+    }
+    notify('Тізім реті қалпына келтірілді');
+  }, [activeGid, notify]);
 
   /* ══ MANUAL PAIR SWAP HANDLERS ══════════════════════════════ */
   function handleSwapStudents() {
@@ -1445,6 +1488,24 @@ export default function App() {
                 </div>
               </section>
             )}
+
+            {/* 6.5 · Distribution / Shuffle Button */}
+            <section style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+              <Btn onClick={shufflePairsStudents} fullWidth sx={{ justifyContent: 'center', padding: '10px' }}>
+                <Shuffle size={14} /> Оқушыларды араластыру
+              </Btn>
+              {customPairsOrder && (
+                <button
+                  onClick={resetPairsOrder}
+                  style={{
+                    background: 'none', border: 'none', color: '#64748b',
+                    fontSize: '11px', fontWeight: 600, cursor: 'pointer', textDecoration: 'underline'
+                  }}
+                >
+                  Бастапқы ретке қайтару
+                </button>
+              )}
+            </section>
 
             {/* 7 · «Менің топтарым» Section (Current curator's groups) */}
             <section style={{ borderTop: '1.5px solid #f1f5f9', paddingTop: '16px' }}>
