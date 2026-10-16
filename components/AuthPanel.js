@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowRight, Lock, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react';
 
 const BRAND = '#1D3597';
 
@@ -10,6 +10,7 @@ export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRe
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState('');
   const [info, setInfo] = useState('');
   const [loading, setLoading] = useState(false);
@@ -127,14 +128,22 @@ export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRe
               {mode !== 'reset' && <div>
                 <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', letterSpacing: '.06em', marginBottom: '6px' }}>{mode === 'recovery' ? 'ЖАҢА ҚҰПИЯ СӨЗ' : 'ҚҰПИЯ СӨЗ'}</div>
                 <div style={{ position: 'relative' }}>
-                  <input type="password" required minLength={mode === 'login' ? undefined : 8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Кемінде 8 символ" style={inputStyle} />
+                  <input type={showPassword ? 'text' : 'password'} required minLength={mode === 'login' ? undefined : 8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Кемінде 8 символ" style={{ ...inputStyle, paddingRight: '42px' }} />
                   <Lock size={16} color="#94a3b8" style={{ position: 'absolute', left: '13px', top: '13px', pointerEvents: 'none' }} />
+                  <button type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? 'Құпия сөзді жасыру' : 'Құпия сөзді көрсету'} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', border: 'none', borderRadius: '6px', background: 'transparent', color: '#64748b', cursor: 'pointer' }}>
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
                 </div>
               </div>}
 
               {mode === 'recovery' && <div>
                 <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', letterSpacing: '.06em', marginBottom: '6px' }}>ҚҰПИЯ СӨЗДІ ҚАЙТАЛАҢЫЗ</div>
-                <input type="password" required minLength={8} autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Құпия сөзді қайталаңыз" style={{ ...inputStyle, paddingLeft: '14px' }} />
+                <div style={{ position: 'relative' }}>
+                  <input type={showPassword ? 'text' : 'password'} required minLength={8} autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Құпия сөзді қайталаңыз" style={{ ...inputStyle, paddingLeft: '14px', paddingRight: '42px' }} />
+                  <button type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? 'Құпия сөзді жасыру' : 'Құпия сөзді көрсету'} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', border: 'none', borderRadius: '6px', background: 'transparent', color: '#64748b', cursor: 'pointer' }}>
+                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                  </button>
+                </div>
               </div>}
 
               {error && <div role="alert" style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#dc2626', fontWeight: 600, lineHeight: 1.5 }}>⚠️ {error}</div>}
