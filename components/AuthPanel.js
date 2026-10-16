@@ -90,7 +90,7 @@ export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRe
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
       <div style={{ background: '#fff', borderRadius: '24px', padding: '40px 38px', width: '420px', maxWidth: '100%', boxShadow: '0 20px 60px rgba(29,53,151,.12), 0 0 0 1px rgba(29,53,151,.06)' }}>
         <div style={{ textAlign: 'center', marginBottom: '26px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '18px', background: 'linear-gradient(135deg, #1D3597 0%, #2b4cc4 100%)', color: '#fff', marginBottom: '14px', boxShadow: '0 8px 24px rgba(29,53,151,.28)' }}>
+          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '16px', background: BRAND, color: '#fff', marginBottom: '14px', boxShadow: '0 4px 14px rgba(29,53,151,.2)' }}>
             <ShieldCheck size={30} />
           </div>
           <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-.5px', color: '#111827' }}>info<span style={{ color: BRAND }}>Logia</span></div>

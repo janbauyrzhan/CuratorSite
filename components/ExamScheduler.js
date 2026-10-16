@@ -814,48 +814,35 @@ export default function ExamScheduler({
         </div>
 
         {showSwapModal && (
-          <section style={{ width: '100%', maxWidth: '1060px', background: '#fff', border: '1px solid #c7d2fe', borderRadius: '14px', padding: '18px', boxShadow: '0 4px 18px rgba(29,53,151,.07)' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
-              <span style={{ color: BRAND, background: '#eef2ff', borderRadius: '8px', padding: '8px', display: 'inline-flex' }}><ArrowLeftRight size={18} /></span>
+          <section style={{ width: '100%', maxWidth: '1060px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
+              <span style={{ color: BRAND, background: '#eef1fb', borderRadius: '8px', padding: '7px', display: 'inline-flex' }}><ArrowLeftRight size={17} /></span>
               <div>
-                <div style={{ fontWeight: 800, color: '#111827', fontSize: '15px' }}>Оқушылардың орындарын қолмен өзгерту (Своп)</div>
-                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>Екі оқушыны таңдаңыз — олардың кестедегі уақыттары ауысады.</div>
+                <div style={{ fontWeight: 800, color: '#111827', fontSize: '14px' }}>Оқушы орындарын ауыстыру</div>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Екі оқушыны таңдаңыз — кестедегі орындары ауысады.</div>
               </div>
             </div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '10px', alignItems: 'end', background: '#f8fafc', padding: '12px', borderRadius: '10px' }}>
-              <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569' }}>1-ОҚУШЫНЫ ТАҢДАҢЫЗ
-                <select value={swapStudentA} onChange={e => setSwapStudentA(e.target.value)} style={{ display: 'block', marginTop: '5px', width: '100%', padding: '9px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#fff', fontSize: '13px' }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '10px', alignItems: 'end' }}>
+              <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>1-ОҚУШЫ
+                <select value={swapStudentA} onChange={e => setSwapStudentA(e.target.value)} style={{ display: 'block', marginTop: '5px', width: '100%', padding: '9px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#fff', fontSize: '13px', color: '#334155' }}>
                   <option value="">-- Бірінші оқушыны таңдаңыз --</option>
                   {swapOptions.map(o => <option key={`exam-a-${o.id}`} value={o.id} disabled={o.id === swapStudentB}>{o.label}</option>)}
                 </select>
               </label>
-              <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569' }}>2-ОҚУШЫНЫ ТАҢДАҢЫЗ
-                <select value={swapStudentB} onChange={e => setSwapStudentB(e.target.value)} style={{ display: 'block', marginTop: '5px', width: '100%', padding: '9px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#fff', fontSize: '13px' }}>
+              <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>2-ОҚУШЫ
+                <select value={swapStudentB} onChange={e => setSwapStudentB(e.target.value)} style={{ display: 'block', marginTop: '5px', width: '100%', padding: '9px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#fff', fontSize: '13px', color: '#334155' }}>
                   <option value="">-- Екінші оқушыны таңдаңыз --</option>
                   {swapOptions.map(o => <option key={`exam-b-${o.id}`} value={o.id} disabled={o.id === swapStudentA}>{o.label}</option>)}
                 </select>
               </label>
               <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                <Btn onClick={handleSwapStudents} disabled={!swapStudentA || !swapStudentB || swapStudentA === swapStudentB}>
-                  <ArrowLeftRight size={14} /> Орындарын ауыстыру
+                <Btn onClick={handleSwapStudents} disabled={!swapStudentA || !swapStudentB || swapStudentA === swapStudentB} sx={{ justifyContent: 'center' }}>
+                  <ArrowLeftRight size={14} /> Ауыстыру
                 </Btn>
                 {slotOverrides && <Btn variant="ghost" onClick={handleResetSwaps}>Бастапқы рет</Btn>}
               </div>
             </div>
-            {slotOverrides && <div style={{ marginTop: '10px', padding: '8px 10px', borderRadius: '8px', background: '#fffbeb', color: '#92400e', fontSize: '12px' }}>⚡ Қолмен өзгертілген кесте. Өзгерістерді сақтау батырмасын басыңыз.</div>}
-            <div style={{ marginTop: '14px', fontSize: '11px', fontWeight: 800, color: '#64748b' }}>ОҚУШЫНЫ ТЕЗ ТАҢДАУ ҮШІН КЕСТЕДЕГІ АТЫН БАСЫҢЫЗ</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '8px', marginTop: '8px', maxHeight: '220px', overflowY: 'auto' }}>
-              {effectiveSlots.map((slot, idx) => slot.map(s => {
-                const selected = s.id === swapStudentA || s.id === swapStudentB;
-                return <button key={`exam-slot-${idx}-${s.id}`} type="button" onClick={() => {
-                  if (!swapStudentA || swapStudentA === s.id) { setSwapStudentA(s.id); if (swapStudentA === s.id) setSwapStudentB(''); }
-                  else if (!swapStudentB) setSwapStudentB(s.id);
-                  else { setSwapStudentA(s.id); setSwapStudentB(''); }
-                }} style={{ textAlign: 'left', padding: '8px 10px', borderRadius: '8px', border: `1px solid ${selected ? '#818cf8' : '#e2e8f0'}`, background: selected ? '#eef2ff' : '#fff', color: '#334155', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>
-                  {idx < 8 ? '1-бағана' : '2-бағана'} · {((idx % 8) + 1)}-қатар · {s.name}
-                </button>;
-              }))}
-            </div>
+            {slotOverrides && <div style={{ marginTop: '10px', color: '#64748b', fontSize: '12px' }}>Қолмен өзгертілді. Кестені сақтау үшін «Өзгерістерді сақтау» батырмасын басыңыз.</div>}
           </section>
         )}
 

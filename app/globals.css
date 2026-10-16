@@ -20,11 +20,23 @@ button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible
 @media (max-width: 900px) {
   .app-header { height: auto !important; min-height: 56px; padding: 10px 14px !important; gap: 10px; flex-wrap: wrap; }
   .app-header-left { gap: 10px !important; flex-wrap: wrap; }
-  .app-brand > span:nth-child(2) { display: none; }
+  .app-brand > span:last-child { display: none; }
   .app-nav { flex-wrap: wrap; }
   .app-account { gap: 8px !important; margin-left: auto; }
   .app-shell { height: 100dvh !important; min-height: 100dvh; }
   .dashboard-shell { padding: 22px 16px 32px !important; }
+}
+
+.app-brand-mark {
+  width: 34px;
+  height: 34px;
+  border-radius: 9px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--brand);
+  color: #fff;
+  flex: 0 0 auto;
 }
 
 @media (max-width: 700px) {

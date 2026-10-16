@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  Plus, Trash2, Download, Copy, LogOut, GraduationCap, Users, Clock, Check, User, ArrowLeftRight, Shuffle, Eye, EyeOff, MessageCircle
+  Plus, Trash2, Download, Copy, LogOut, GraduationCap, Users, Clock, Check, User, ArrowLeftRight, Shuffle, Eye, EyeOff, MessageCircle, ShieldCheck
 } from 'lucide-react';
 import AuthPanel     from './AuthPanel';
 import Poster        from './Poster';
@@ -908,19 +908,19 @@ export default function App() {
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }} className="app-header-left">
           <div
             onClick={() => setActiveTab('hub')}
-            style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
             className="app-brand"
             title="Басты мәзірге өту"
           >
+            <span className="app-brand-mark"><ShieldCheck size={19} /></span>
             <span style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '-0.5px', color: '#111827' }}>
               info<span style={{ color: BRAND }}>Logia</span>
             </span>
             <span style={{
-              fontSize: '11px', fontWeight: 800, color: BRAND,
-              background: '#eef1fb', padding: '2px 8px', borderRadius: '6px',
-              marginLeft: '4px'
+              fontSize: '12px', fontWeight: 600, color: '#64748b',
+              marginLeft: '2px'
             }}>
-              Куратор сайты
+              Кураторлардың жұмыс кабинеті
             </span>
           </div>
           <div style={{ width: '1px', height: '18px', background: '#e5e7eb' }} />
