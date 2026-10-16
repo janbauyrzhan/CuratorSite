@@ -59,12 +59,6 @@ export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRe
         if (authError) throw authError;
         if (data.session && data.user) onAuth?.(data.user);
         else setInfo('Тіркелуді аяқтау үшін электрондық поштаңызға келген сілтемені ашыңыз.');
-      } else if (mode === 'reset') {
-        const { error: authError } = await supabase.auth.resetPasswordForEmail(email.trim(), {
-          redirectTo: window.location.origin,
-        });
-        if (authError) throw authError;
-        setInfo('Құпия сөзді жаңарту сілтемесі поштаңызға жіберілді.');
       } else {
         const { data, error: authError } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
         if (authError) throw authError;
@@ -90,7 +84,7 @@ export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRe
     fontSize: '13px', fontWeight: 800, background: active ? '#fff' : 'transparent',
     color: active ? BRAND : '#64748b', boxShadow: active ? '0 2px 8px rgba(0,0,0,.08)' : 'none',
   });
-  const title = mode === 'recovery' ? 'Жаңа құпия сөз' : mode === 'reset' ? 'Құпия сөзді қалпына келтіру' : 'Кураторлардың жұмыс кабинеті';
+  const title = mode === 'recovery' ? 'Жаңа құпия сөз' : 'Кураторлардың жұмыс кабинеті';
 
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
@@ -109,7 +103,7 @@ export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRe
           </div>
         ) : (
           <>
-            {mode !== 'recovery' && mode !== 'reset' && (
+              {mode !== 'recovery' && (
               <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '12px', padding: '4px', marginBottom: '22px' }}>
                 <button type="button" onClick={() => { setMode('login'); setError(''); setInfo(''); }} style={tabStyle(mode === 'login')}>Кіру</button>
                 <button type="button" onClick={() => { setMode('register'); setError(''); setInfo(''); }} style={tabStyle(mode === 'register')}>Тіркелу</button>
@@ -125,7 +119,7 @@ export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRe
                 </div>
               </div>}
 
-              {mode !== 'reset' && <div>
+              {<div>
                 <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', letterSpacing: '.06em', marginBottom: '6px' }}>{mode === 'recovery' ? 'ЖАҢА ҚҰПИЯ СӨЗ' : 'ҚҰПИЯ СӨЗ'}</div>
                 <div style={{ position: 'relative' }}>
                   <input type={showPassword ? 'text' : 'password'} required minLength={mode === 'login' ? undefined : 8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Кемінде 8 символ" style={{ ...inputStyle, paddingRight: '42px' }} />
@@ -150,13 +144,11 @@ export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRe
               {info && <div role="status" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#166534', fontWeight: 600, lineHeight: 1.5 }}>{info}</div>}
 
               <button type="submit" disabled={loading} style={{ background: loading ? '#94a3b8' : BRAND, color: '#fff', border: 'none', borderRadius: '12px', padding: '13px', fontSize: '14px', fontWeight: 800, cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '4px', boxShadow: '0 4px 14px rgba(29,53,151,.25)' }}>
-                <span>{loading ? 'Күте тұрыңыз...' : mode === 'register' ? 'Аккаунт құру' : mode === 'reset' ? 'Сілтеме жіберу' : mode === 'recovery' ? 'Құпия сөзді сақтау' : 'Кіру'}</span>
+                <span>{loading ? 'Күте тұрыңыз...' : mode === 'register' ? 'Аккаунт құру' : mode === 'recovery' ? 'Құпия сөзді сақтау' : 'Кіру'}</span>
                 <ArrowRight size={16} />
               </button>
             </form>
 
-            {mode === 'login' && <button type="button" onClick={() => { setMode('reset'); setError(''); setInfo(''); }} style={{ width: '100%', marginTop: '14px', background: 'transparent', border: 'none', color: BRAND, fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}>Құпия сөзді ұмыттыңыз ба?</button>}
-            {mode === 'reset' && <button type="button" onClick={() => { setMode('login'); setError(''); setInfo(''); }} style={{ width: '100%', marginTop: '14px', background: 'transparent', border: 'none', color: BRAND, fontWeight: 700, cursor: 'pointer', fontSize: '12px' }}>Кіруге оралу</button>}
           </>
         )}
       </div>
