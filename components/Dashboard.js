@@ -10,7 +10,7 @@ import {
   Users, Clock, ArrowRight, Plus, GraduationCap, Layers, Shuffle, CalendarDays, MessageCircle,
 } from 'lucide-react';
 
-const BRAND_BLUE = '#1D3597';
+const BRAND_BLUE = '#364097';
 const BRAND = BRAND_BLUE;
 const PAIR_FEATURES = [
   { Icon: Shuffle, label: 'Қайталанбайтын жұптар' },
@@ -42,7 +42,7 @@ export default function Dashboard({
     <div style={{
       flex: 1,
       overflowY: 'auto',
-      background: '#f1f5f9',
+      background: 'linear-gradient(135deg, #f4f6ff 0%, #eef0ff 58%, #f7f8ff 100%)',
       padding: '32px 24px 48px',
       display: 'flex',
       flexDirection: 'column',
@@ -67,7 +67,7 @@ export default function Dashboard({
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
             <div style={{
               width: '48px', height: '48px', borderRadius: '14px',
-              background: '#eef1fb',
+              background: '#eff0ff',
               color: BRAND_BLUE, display: 'flex', alignItems: 'center', justifyContent: 'center',
               flexShrink: 0,
             }}>
@@ -75,7 +75,7 @@ export default function Dashboard({
             </div>
             <div>
               <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
-                <span style={{ fontSize: '11px', fontWeight: 800, background: '#eef1fb', color: BRAND_BLUE, padding: '3px 10px', borderRadius: '999px', letterSpacing: '.06em' }}>
+                <span style={{ fontSize: '11px', fontWeight: 800, background: '#eff0ff', color: BRAND_BLUE, padding: '3px 10px', borderRadius: '999px', letterSpacing: '.06em' }}>
                   КУРАТОРДЫҢ ЖЕКЕ КАБИНЕТІ
                 </span>
                 {user?.email && (
@@ -153,7 +153,7 @@ export default function Dashboard({
           gap: '24px',
         }}>
 
-          {/* ── CARD 1: ЖҰПТЫҚ ЖҰМЫС (Blue #1D3597) ────────── */}
+          {/* ── CARD 1: ЖҰПТЫҚ ЖҰМЫС (Blue #364097) ────────── */}
           <div
             onClick={() => onNavigate('pairs')}
             onMouseEnter={() => setHoveredCard('pairs')}
@@ -171,7 +171,7 @@ export default function Dashboard({
               transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
               transform: hoveredCard === 'pairs' ? 'translateY(-2px)' : 'translateY(0)',
               boxShadow: hoveredCard === 'pairs'
-                ? '0 8px 20px rgba(29, 53, 151, 0.08)'
+                ? '0 8px 20px rgba(54, 64, 151, 0.09)'
                 : '0 2px 8px rgba(15, 23, 42, 0.03)',
               position: 'relative',
               overflow: 'hidden',
@@ -181,7 +181,7 @@ export default function Dashboard({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
               <div style={{
                 width: '48px', height: '48px', borderRadius: '12px',
-                background: '#eef1fb',
+                background: '#eff0ff',
                 color: BRAND_BLUE, display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <Users size={26} />
@@ -257,7 +257,7 @@ export default function Dashboard({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 14px rgba(29, 53, 151, 0.25)',
+                boxShadow: '0 4px 14px rgba(54, 64, 151, 0.25)',
                 transition: 'background 0.15s, transform 0.15s',
               }}
             >
@@ -284,7 +284,7 @@ export default function Dashboard({
               transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
               transform: hoveredCard === 'exam' ? 'translateY(-2px)' : 'translateY(0)',
               boxShadow: hoveredCard === 'exam'
-                ? '0 8px 20px rgba(29, 53, 151, 0.08)'
+                ? '0 8px 20px rgba(54, 64, 151, 0.09)'
                 : '0 2px 8px rgba(15, 23, 42, 0.03)',
               position: 'relative',
               overflow: 'hidden',
@@ -294,13 +294,13 @@ export default function Dashboard({
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
               <div style={{
                 width: '48px', height: '48px', borderRadius: '12px',
-                background: '#eef1fb',
+                background: '#eff0ff',
                 color: BRAND, display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <Clock size={26} />
               </div>
               <span style={{
-                fontSize: '11px', fontWeight: 800, background: '#eef1fb',
+                fontSize: '11px', fontWeight: 800, background: '#eff0ff',
                 color: BRAND, border: '1px solid #c7d2fe',
                 padding: '4px 12px', borderRadius: '999px', letterSpacing: '.05em',
               }}>
@@ -370,7 +370,7 @@ export default function Dashboard({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 14px rgba(29, 53, 151, 0.2)',
+                boxShadow: '0 4px 14px rgba(54, 64, 151, 0.2)',
                 transition: 'background 0.15s, transform 0.15s',
               }}
             >
@@ -405,7 +405,7 @@ export default function Dashboard({
               onNavigate('pairs');
             }}
             style={{
-              background: '#eef1fb', border: '1px solid #c7d5f8',
+              background: '#eff0ff', border: '1px solid #c7d5f8',
               color: BRAND_BLUE, borderRadius: '8px', padding: '7px 14px',
               fontSize: '12px', fontWeight: 800, cursor: 'pointer',
               display: 'inline-flex', alignItems: 'center', gap: '6px',

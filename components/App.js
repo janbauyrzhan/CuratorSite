@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  Plus, Trash2, Download, Copy, LogOut, GraduationCap, Users, Clock, Check, User, ArrowLeftRight, Shuffle, Eye, EyeOff, MessageCircle, ShieldCheck
+  Plus, Trash2, Download, Copy, LogOut, GraduationCap, Users, Clock, Check, User, ArrowLeftRight, Shuffle, Eye, EyeOff, MessageCircle
 } from 'lucide-react';
 import AuthPanel     from './AuthPanel';
 import Poster        from './Poster';
@@ -26,7 +26,7 @@ import {
 } from '@/lib/svgTemplate';
 
 /* ── Constants ──────────────────────────────────────────────── */
-const BRAND     = '#1D3597';
+const BRAND     = '#364097';
 const MAX_WEEKS = 16; // 1 to 16 weeks compact switcher
 
 /* ── Realistic 28-Student Demo Dataset ──────────────────────── */
@@ -895,7 +895,7 @@ export default function App() {
      AUTHENTICATED WORKSPACE
      ══════════════════════════════════════════════════════════════ */
   return (
-    <div className="app-shell" style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+    <div className="app-shell" style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f7f8ff' }}>
 
       {/* ══ TOP BAR: LOGO, TWO TABS, USERNAME & LOGOUT ONLY ═════ */}
       <header style={{
@@ -912,16 +912,7 @@ export default function App() {
             className="app-brand"
             title="Басты мәзірге өту"
           >
-            <span className="app-brand-mark"><ShieldCheck size={19} /></span>
-            <span style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '-0.5px', color: '#111827' }}>
-              info<span style={{ color: BRAND }}>Logia</span>
-            </span>
-            <span style={{
-              fontSize: '12px', fontWeight: 600, color: '#64748b',
-              marginLeft: '2px'
-            }}>
-              Кураторлардың жұмыс кабинеті
-            </span>
+            <img src="/infologia-logo.png" alt="infoLogia — Кураторлардың жұмыс кабинеті" className="app-brand-logo" />
           </div>
           <div style={{ width: '1px', height: '18px', background: '#e5e7eb' }} />
 
@@ -944,7 +935,7 @@ export default function App() {
                 ← Басты мәзірге
               </button>
 
-              <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '10px', padding: '3px', gap: '3px' }}>
+              <div style={{ display: 'flex', background: '#eff0ff', borderRadius: '10px', padding: '3px', gap: '3px' }}>
                 <button
                   onClick={() => setActiveTab('pairs')}
                   style={{
@@ -1019,19 +1010,11 @@ export default function App() {
       {/* ══ WORKSPACE CONTENT: HUB vs TAB 1 vs TAB 2 ════════════ */}
       {activeTab === 'hub' ? (
         /* ════ HUB / DASHBOARD SCREEN ═══════════════════════════ */
-        <div style={{ flex: 1, overflowY: 'auto', background: '#f8fafc', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
+        <div style={{ flex: 1, overflowY: 'auto', background: 'linear-gradient(135deg, #f4f6ff 0%, #e9edff 56%, #f7f8ff 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
           <div style={{ width: '100%', maxWidth: '980px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
 
             {/* Header Hero */}
             <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-              <div style={{
-                display: 'inline-flex', alignItems: 'center', gap: '8px',
-                background: '#eef1fb', border: '1px solid #c7d5f8',
-                borderRadius: '999px', padding: '5px 16px',
-                fontSize: '12.5px', fontWeight: 800, color: BRAND
-              }}>
-                <GraduationCap size={14} /> infoLogia • Куратордың жеке кабинеті
-              </div>
               <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.5px' }}>
                 Жұмыс жасау үшін қажетті модульді таңдаңыз
               </h1>
@@ -1043,12 +1026,12 @@ export default function App() {
             {/* Two Large Interactive Cards */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
               
-              {/* Card 1: ЖҰПТЫҚ ЖҰМЫС (Blue #1D3597) */}
+              {/* Card 1: ЖҰПТЫҚ ЖҰМЫС (Blue #364097) */}
               <div
                 onClick={() => setActiveTab('pairs')}
                 style={{
                   background: '#ffffff',
-                  border: '2px solid #e2e8f0',
+                  border: '1.5px solid #dce2fa',
                   borderRadius: '20px',
                   padding: '32px 28px',
                   display: 'flex',
@@ -1062,7 +1045,7 @@ export default function App() {
                 onMouseEnter={e => {
                   e.currentTarget.style.borderColor = BRAND;
                   e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 14px 34px rgba(29, 53, 151, 0.12)';
+                  e.currentTarget.style.boxShadow = '0 14px 34px rgba(54, 64, 151, 0.12)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.borderColor = '#e2e8f0';
@@ -1074,14 +1057,14 @@ export default function App() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{
                       width: '48px', height: '48px', borderRadius: '14px',
-                      background: '#eef1fb', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: '#eff0ff', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       color: BRAND
                     }}>
                       <Users size={26} />
                     </div>
                     <span style={{
                       fontSize: '11px', fontWeight: 800, color: BRAND,
-                      background: '#eef1fb', padding: '4px 10px', borderRadius: '6px'
+                      background: '#eff0ff', padding: '4px 10px', borderRadius: '6px'
                     }}>
                       16 АПТАЛЫҚ КАРУСЕЛЬ
                     </span>
@@ -1128,7 +1111,7 @@ export default function App() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px',
-                    boxShadow: '0 4px 14px rgba(29, 53, 151, 0.25)',
+                    boxShadow: '0 4px 14px rgba(54, 64, 151, 0.25)',
                     transition: 'all .15s',
                   }}
                 >
@@ -1141,7 +1124,7 @@ export default function App() {
                 onClick={() => setActiveTab('exam')}
                 style={{
                   background: '#ffffff',
-                  border: '2px solid #e2e8f0',
+                  border: '1.5px solid #dce2fa',
                   borderRadius: '20px',
                   padding: '32px 28px',
                   display: 'flex',
@@ -1155,7 +1138,7 @@ export default function App() {
                 onMouseEnter={e => {
                   e.currentTarget.style.borderColor = BRAND;
                   e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 14px 34px rgba(29, 53, 151, 0.12)';
+                  e.currentTarget.style.boxShadow = '0 14px 34px rgba(54, 64, 151, 0.12)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.borderColor = '#e2e8f0';
@@ -1167,14 +1150,14 @@ export default function App() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{
                       width: '48px', height: '48px', borderRadius: '14px',
-                      background: '#eef1fb', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      background: '#eff0ff', display: 'flex', alignItems: 'center', justifyContent: 'center',
                       color: BRAND
                     }}>
                       <Clock size={26} />
                     </div>
                     <span style={{
                       fontSize: '11px', fontWeight: 800, color: BRAND,
-                      background: '#eef1fb', padding: '4px 10px', borderRadius: '6px'
+                      background: '#eff0ff', padding: '4px 10px', borderRadius: '6px'
                     }}>
                       16 СЛОТТЫҚ КЕСТЕ
                     </span>
@@ -1221,7 +1204,7 @@ export default function App() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px',
-                    boxShadow: '0 4px 14px rgba(29, 53, 151, 0.2)',
+                    boxShadow: '0 4px 14px rgba(54, 64, 151, 0.2)',
                     transition: 'all .15s',
                   }}
                 >
@@ -1265,7 +1248,7 @@ export default function App() {
                   justifyContent: 'center',
                   gap: '8px',
                   transition: 'all .2s ease',
-                  boxShadow: savedAnim ? '0 4px 14px rgba(5,150,105,0.3)' : '0 4px 14px rgba(29,53,151,0.2)',
+                  boxShadow: savedAnim ? '0 4px 14px rgba(5,150,105,0.3)' : '0 4px 14px rgba(54,64,151,0.2)',
                 }}
               >
                 {savedAnim ? (
@@ -1374,7 +1357,7 @@ export default function App() {
                         onClick={insertDemoData}
                         title="28 оқушының демо-тізімін қою"
                         style={{
-                          background: '#eef1fb', border: '1px solid #c7d5f8',
+                          background: '#eff0ff', border: '1px solid #c7d5f8',
                           color: BRAND, borderRadius: '6px', padding: '2px 8px',
                           fontSize: '11px', fontWeight: 700, cursor: 'pointer',
                           display: 'inline-flex', alignItems: 'center', gap: '3px',
@@ -1649,7 +1632,7 @@ export default function App() {
 
           {/* ════ RIGHT PANEL: Real-Time Canva SVG Live Poster ════ */}
           <main className="workspace-main" style={{
-            flex: 1, overflowY: 'auto', background: '#f1f5f9',
+            flex: 1, overflowY: 'auto', background: '#f1f3ff',
             padding: '24px', display: 'flex', flexDirection: 'column',
             gap: '14px', alignItems: 'center',
           }}>
@@ -1661,12 +1644,12 @@ export default function App() {
                 background: '#ffffff', border: '1.5px solid #dbeafe', borderRadius: '14px',
                 padding: '18px 22px',
                 display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '16px',
-                boxShadow: '0 2px 12px rgba(29,53,151,0.05)',
+                boxShadow: '0 2px 12px rgba(54,64,151,0.05)',
               }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: '14px' }}>
                   <div style={{
                     width: '40px', height: '40px', borderRadius: '10px',
-                    background: '#eef1fb', color: BRAND, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
+                    background: '#eff0ff', color: BRAND, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                   }}>
                     <GraduationCap size={20} />
                   </div>
@@ -1719,7 +1702,7 @@ export default function App() {
                 variant="ghost"
                 onClick={() => setShowSwapModal(v => !v)}
                 sx={{
-                  background: showSwapModal ? '#eef1fb' : '#ffffff',
+                  background: showSwapModal ? '#eff0ff' : '#ffffff',
                   borderColor: showSwapModal ? BRAND : (pairOverrides[safeWeek] ? '#f59e0b' : '#e5e7eb'),
                   color: showSwapModal ? BRAND : (pairOverrides[safeWeek] ? '#b45309' : '#374151'),
                   fontWeight: 700,
@@ -1766,14 +1749,14 @@ export default function App() {
                 width: '100%', maxWidth: '1020px',
                 background: '#ffffff', border: '1.5px solid #c7d2fe', borderRadius: '14px',
                 padding: '16px 20px',
-                boxShadow: '0 4px 16px rgba(29,53,151,0.08)',
+                boxShadow: '0 4px 16px rgba(54,64,151,0.08)',
                 display: 'flex', flexDirection: 'column', gap: '14px'
               }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                     <div style={{
                       width: '32px', height: '32px', borderRadius: '8px',
-                      background: '#eef1fb', color: BRAND, display: 'flex', alignItems: 'center', justifyContent: 'center'
+                      background: '#eff0ff', color: BRAND, display: 'flex', alignItems: 'center', justifyContent: 'center'
                     }}>
                       <ArrowLeftRight size={16} />
                     </div>

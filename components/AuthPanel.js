@@ -1,9 +1,9 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { ArrowRight, Eye, EyeOff, Lock, Mail, ShieldCheck } from 'lucide-react';
+import { ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react';
 
-const BRAND = '#1D3597';
+const BRAND = '#364097';
 
 export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRecoveryDone }) {
   const [mode, setMode] = useState('login');
@@ -87,13 +87,10 @@ export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRe
   const title = mode === 'recovery' ? 'Жаңа құпия сөз' : 'Кураторлардың жұмыс кабинеті';
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'linear-gradient(135deg, #f8fafc 0%, #eef2ff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div style={{ background: '#fff', borderRadius: '24px', padding: '40px 38px', width: '420px', maxWidth: '100%', boxShadow: '0 20px 60px rgba(29,53,151,.12), 0 0 0 1px rgba(29,53,151,.06)' }}>
+    <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'linear-gradient(135deg, #f4f6ff 0%, #e9edff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+      <div style={{ background: '#fff', borderRadius: '24px', padding: '40px 38px', width: '420px', maxWidth: '100%', boxShadow: '0 20px 60px rgba(54,64,151,.12), 0 0 0 1px rgba(54,64,151,.06)' }}>
         <div style={{ textAlign: 'center', marginBottom: '26px' }}>
-          <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '64px', height: '64px', borderRadius: '16px', background: BRAND, color: '#fff', marginBottom: '14px', boxShadow: '0 4px 14px rgba(29,53,151,.2)' }}>
-            <ShieldCheck size={30} />
-          </div>
-          <div style={{ fontSize: '28px', fontWeight: 900, letterSpacing: '-.5px', color: '#111827' }}>info<span style={{ color: BRAND }}>Logia</span></div>
+          <img src="/infologia-logo.png" alt="infoLogia" style={{ display: 'block', width: '210px', height: '74px', maxWidth: '100%', objectFit: 'cover', objectPosition: 'center', borderRadius: '10px', margin: '0 auto 14px' }} />
           <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', fontWeight: 600 }}>{title}</div>
         </div>
 
@@ -104,7 +101,7 @@ export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRe
         ) : (
           <>
               {mode !== 'recovery' && (
-              <div style={{ display: 'flex', background: '#f1f5f9', borderRadius: '12px', padding: '4px', marginBottom: '22px' }}>
+              <div style={{ display: 'flex', background: '#eff0ff', borderRadius: '12px', padding: '4px', marginBottom: '22px' }}>
                 <button type="button" onClick={() => { setMode('login'); setError(''); setInfo(''); }} style={tabStyle(mode === 'login')}>Кіру</button>
                 <button type="button" onClick={() => { setMode('register'); setError(''); setInfo(''); }} style={tabStyle(mode === 'register')}>Тіркелу</button>
               </div>
@@ -143,7 +140,7 @@ export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRe
               {error && <div role="alert" style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#dc2626', fontWeight: 600, lineHeight: 1.5 }}>⚠️ {error}</div>}
               {info && <div role="status" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#166534', fontWeight: 600, lineHeight: 1.5 }}>{info}</div>}
 
-              <button type="submit" disabled={loading} style={{ background: loading ? '#94a3b8' : BRAND, color: '#fff', border: 'none', borderRadius: '12px', padding: '13px', fontSize: '14px', fontWeight: 800, cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '4px', boxShadow: '0 4px 14px rgba(29,53,151,.25)' }}>
+              <button type="submit" disabled={loading} style={{ background: loading ? '#94a3b8' : BRAND, color: '#fff', border: 'none', borderRadius: '12px', padding: '13px', fontSize: '14px', fontWeight: 800, cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '4px', boxShadow: '0 4px 14px rgba(54,64,151,.2)' }}>
                 <span>{loading ? 'Күте тұрыңыз...' : mode === 'register' ? 'Аккаунт құру' : mode === 'recovery' ? 'Құпия сөзді сақтау' : 'Кіру'}</span>
                 <ArrowRight size={16} />
               </button>

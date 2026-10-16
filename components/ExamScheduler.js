@@ -14,7 +14,7 @@ import {
 } from '@/lib/svgTemplate2';
 import { cleanStudentName } from '@/lib/utils';
 
-const BRAND = '#1D3597';
+const BRAND = '#364097';
 
 const DEMO_EXAM_STUDENTS = `Болатұлы Нұрдәулет
 Еркинжан Каусар
@@ -421,7 +421,7 @@ export default function ExamScheduler({
               justifyContent: 'center',
               gap: '8px',
               transition: 'all .2s ease',
-              boxShadow: savedAnim ? '0 4px 14px rgba(5,150,105,0.3)' : '0 4px 14px rgba(29,53,151,0.2)',
+              boxShadow: savedAnim ? '0 4px 14px rgba(5,150,105,0.3)' : '0 4px 14px rgba(54,64,151,0.2)',
             }}
           >
             {savedAnim ? (
@@ -665,7 +665,7 @@ export default function ExamScheduler({
                     }}
                     title="28 оқушының телефонсыз демо-тізімін қою"
                     style={{
-                      background: '#eef1fb', border: '1px solid #c7d5f8',
+                      background: '#eff0ff', border: '1px solid #c7d5f8',
                       color: BRAND, borderRadius: '6px', padding: '2px 8px',
                       fontSize: '11px', fontWeight: 700, cursor: 'pointer',
                       display: 'inline-flex', alignItems: 'center', gap: '3px',
@@ -792,7 +792,7 @@ export default function ExamScheduler({
 
       {/* ════ RIGHT PANEL: Live Canvas SVG Poster ════════════ */}
       <main className="workspace-main" style={{
-        flex: 1, overflowY: 'auto', background: '#f1f5f9',
+        flex: 1, overflowY: 'auto', background: '#f1f3ff',
         padding: '24px', display: 'flex', flexDirection: 'column',
         gap: '14px', alignItems: 'center',
       }}>
@@ -816,7 +816,7 @@ export default function ExamScheduler({
         {showSwapModal && (
           <section style={{ width: '100%', maxWidth: '1060px', background: '#fff', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-              <span style={{ color: BRAND, background: '#eef1fb', borderRadius: '8px', padding: '7px', display: 'inline-flex' }}><ArrowLeftRight size={17} /></span>
+              <span style={{ color: BRAND, background: '#eff0ff', borderRadius: '8px', padding: '7px', display: 'inline-flex' }}><ArrowLeftRight size={17} /></span>
               <div>
                 <div style={{ fontWeight: 800, color: '#111827', fontSize: '14px' }}>Оқушы орындарын ауыстыру</div>
                 <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Екі оқушыны таңдаңыз — кестедегі орындары ауысады.</div>
