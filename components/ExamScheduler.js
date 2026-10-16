@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Download, Shuffle, Clock, Plus, Trash2, Check,
+  Download, Shuffle, Clock, Plus, Trash2, Check, ArrowLeftRight,
 } from 'lucide-react';
 import {
   fillSvgTemplate2, downloadSvg2AsPng, addMinutesToTime, RAW_SVG_TEMPLATE2,
@@ -138,6 +138,16 @@ export default function ExamScheduler({
   const [interval, setInterval]                 = useState(activeGroup?.examSettings?.interval || 10);
   const [customOrder, setCustomOrder]           = useState(null);
   const [showStudentList, setShowStudentList]   = useState(false);
+  const [showSwapModal, setShowSwapModal]       = useState(false);
+  const [swapStudentA, setSwapStudentA]         = useState('');
+  const [swapStudentB, setSwapStudentB]         = useState('');
+  const [slotOverrides, setSlotOverrides]       = useState(null);
+
+  useEffect(() => {
+    setSlotOverrides(activeGroup?.examSettings?.slotOverrides || null);
+    setSwapStudentA('');
+    setSwapStudentB('');
+  }, [activeGroup?.id]);
 
   // Auto-calculated Column 2 Start Time for single_day mode
   const effectiveStartTime2 = useMemo(() => {
@@ -189,6 +199,12 @@ export default function ExamScheduler({
     return res;
   }, [students, customOrder]);
 
+  /* ── Effective Slots (with manual overrides applied) ────── */
+  const effectiveSlots = useMemo(() => {
+    if (!slotOverrides || slotOverrides.length === 0) return slots;
+    return slotOverrides;
+  }, [slots, slotOverrides]);
+
   /* ── Real-Time Dynamic SVG 2 Generation ─────────────────── */
   const filledSvg2 = useMemo(() => {
     return fillSvgTemplate2(svgTemplate2, {
@@ -198,9 +214,9 @@ export default function ExamScheduler({
       startTime1: startTime,
       startTime2: effectiveStartTime2,
       intervalMinutes: interval,
-      slots,
+      slots: effectiveSlots,
     });
-  }, [svgTemplate2, examWeek, effectiveDate1, effectiveDate2, startTime, effectiveStartTime2, interval, slots]);
+  }, [svgTemplate2, examWeek, effectiveDate1, effectiveDate2, startTime, effectiveStartTime2, interval, effectiveSlots]);
 
   /* ── Shuffle Action ─────────────────────────────────────── */
   const shuffleStudents = useCallback(() => {
@@ -210,13 +226,81 @@ export default function ExamScheduler({
     }
     const shuffled = [...students].sort(() => Math.random() - 0.5).map(s => s.id);
     setCustomOrder(shuffled);
+    setSlotOverrides(null);
     notify('🎲 Оқушылар кездейсоқ ретпен қайта бөлінді!');
   }, [students, notify]);
 
   const resetOrder = useCallback(() => {
     setCustomOrder(null);
+    setSlotOverrides(null);
     notify('Тізім реті қалпына келтірілді');
   }, [notify]);
+
+  /* ── Options for Student Swapping ───────────────────────── */
+  const swapOptions = useMemo(() => {
+    const list = [];
+    effectiveSlots.forEach((slot, sIdx) => {
+      slot.forEach((s, pos) => {
+        if (s && s.id) {
+          const col = sIdx < 8 ? '1-бағана' : '2-бағана';
+          const row = (sIdx % 8) + 1;
+          list.push({
+            id: s.id,
+            label: `${col}, ${row}-қатар: ${s.name}`,
+            name: s.name,
+          });
+        }
+      });
+    });
+    return list;
+  }, [effectiveSlots]);
+
+  /* ── Manual Swap Handler ────────────────────────────────── */
+  function handleSwapStudents() {
+    if (!swapStudentA || !swapStudentB) {
+      notify('Ауыстыру үшін екі оқушыны таңдаңыз');
+      return;
+    }
+    if (swapStudentA === swapStudentB) {
+      notify('Бірдей оқушыны таңдау мүмкін емес');
+      return;
+    }
+
+    const slotsCopy = effectiveSlots.map(slot => [...slot]);
+    let posA = null;
+    let posB = null;
+
+    for (let r = 0; r < slotsCopy.length; r++) {
+      for (let c = 0; c < slotsCopy[r].length; c++) {
+        if (slotsCopy[r][c]?.id === swapStudentA) posA = { r, c };
+        if (slotsCopy[r][c]?.id === swapStudentB) posB = { r, c };
+      }
+    }
+
+    if (!posA || !posB) {
+      notify('Таңдалған оқушылар табылған жоқ');
+      return;
+    }
+
+    const temp = slotsCopy[posA.r][posA.c];
+    slotsCopy[posA.r][posA.c] = slotsCopy[posB.r][posB.c];
+    slotsCopy[posB.r][posB.c] = temp;
+
+    setSlotOverrides(slotsCopy);
+
+    const nameA = temp.name;
+    const nameB = slotsCopy[posA.r][posA.c]?.name;
+    setSwapStudentA('');
+    setSwapStudentB('');
+    notify(`✓ ${nameA} және ${nameB} орындары ауыстырылды!`);
+  }
+
+  function handleResetSwaps() {
+    setSlotOverrides(null);
+    setSwapStudentA('');
+    setSwapStudentB('');
+    notify('Бастапқы орналасуға қайтарылды');
+  }
 
   /* ── PNG Export ─────────────────────────────────────────── */
   async function downloadPNG() {
@@ -246,7 +330,7 @@ export default function ExamScheduler({
       text += `\n📍 ${effectiveDate1}:\n`;
       let hasAny = false;
       for (let i = 0; i < 16; i++) {
-        const slotData = slots[i] || [];
+        const slotData = effectiveSlots[i] || [];
         if (slotData.length === 0) continue;
         hasAny = true;
         const sStart = i < 8
@@ -261,7 +345,7 @@ export default function ExamScheduler({
       text += `\n📍 ${effectiveDate1} (1-бағана):\n`;
       let col1Has = false;
       for (let i = 0; i < 8; i++) {
-        const slotData = slots[i] || [];
+        const slotData = effectiveSlots[i] || [];
         if (slotData.length === 0) continue;
         col1Has = true;
         const sStart = addMinutesToTime(startTime, i * interval);
@@ -274,7 +358,7 @@ export default function ExamScheduler({
       text += `\n📍 ${effectiveDate2} (2-бағана):\n`;
       let col2Has = false;
       for (let i = 8; i < 16; i++) {
-        const slotData = slots[i] || [];
+        const slotData = effectiveSlots[i] || [];
         if (slotData.length === 0) continue;
         col2Has = true;
         const sStart = addMinutesToTime(effectiveStartTime2, (i - 8) * interval);
@@ -288,7 +372,7 @@ export default function ExamScheduler({
     navigator.clipboard.writeText(text.trim())
       .then(() => notify('WhatsApp мәтіні көшірілді! ✓'))
       .catch(() => notify('Көшіру мүмкін болмады'));
-  }, [students, examWeek, activeGroup, scheduleMode, effectiveDate1, effectiveDate2, startTime, effectiveStartTime2, interval, slots, notify]);
+  }, [students, examWeek, activeGroup, scheduleMode, effectiveDate1, effectiveDate2, startTime, effectiveStartTime2, interval, effectiveSlots, notify]);
 
   /* ── Save Current Settings ──────────────────────────────── */
   function handleSave() {
@@ -301,6 +385,7 @@ export default function ExamScheduler({
       startTime,
       manualStartTime2,
       interval,
+      slotOverrides,
     });
   }
 
@@ -723,7 +808,56 @@ export default function ExamScheduler({
           <Btn variant="ghost" onClick={copyWhatsApp}>
             💬 WhatsApp мәтінін көшіру
           </Btn>
+          <Btn variant="ghost" onClick={() => setShowSwapModal(v => !v)}>
+            <ArrowLeftRight size={14} /> ✍️ Оқушылар орнын өзгерту / Своп
+          </Btn>
         </div>
+
+        {showSwapModal && (
+          <section style={{ width: '100%', maxWidth: '1060px', background: '#fff', border: '1px solid #c7d2fe', borderRadius: '14px', padding: '18px', boxShadow: '0 4px 18px rgba(29,53,151,.07)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '14px' }}>
+              <span style={{ color: BRAND, background: '#eef2ff', borderRadius: '8px', padding: '8px', display: 'inline-flex' }}><ArrowLeftRight size={18} /></span>
+              <div>
+                <div style={{ fontWeight: 800, color: '#111827', fontSize: '15px' }}>Оқушылардың орындарын қолмен өзгерту (Своп)</div>
+                <div style={{ fontSize: '12px', color: '#64748b', marginTop: '3px' }}>Екі оқушыны таңдаңыз — олардың кестедегі уақыттары ауысады.</div>
+              </div>
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '10px', alignItems: 'end', background: '#f8fafc', padding: '12px', borderRadius: '10px' }}>
+              <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569' }}>1-ОҚУШЫНЫ ТАҢДАҢЫЗ
+                <select value={swapStudentA} onChange={e => setSwapStudentA(e.target.value)} style={{ display: 'block', marginTop: '5px', width: '100%', padding: '9px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#fff', fontSize: '13px' }}>
+                  <option value="">-- Бірінші оқушыны таңдаңыз --</option>
+                  {swapOptions.map(o => <option key={`exam-a-${o.id}`} value={o.id} disabled={o.id === swapStudentB}>{o.label}</option>)}
+                </select>
+              </label>
+              <label style={{ fontSize: '11px', fontWeight: 800, color: '#475569' }}>2-ОҚУШЫНЫ ТАҢДАҢЫЗ
+                <select value={swapStudentB} onChange={e => setSwapStudentB(e.target.value)} style={{ display: 'block', marginTop: '5px', width: '100%', padding: '9px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#fff', fontSize: '13px' }}>
+                  <option value="">-- Екінші оқушыны таңдаңыз --</option>
+                  {swapOptions.map(o => <option key={`exam-b-${o.id}`} value={o.id} disabled={o.id === swapStudentA}>{o.label}</option>)}
+                </select>
+              </label>
+              <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                <Btn onClick={handleSwapStudents} disabled={!swapStudentA || !swapStudentB || swapStudentA === swapStudentB}>
+                  <ArrowLeftRight size={14} /> Орындарын ауыстыру
+                </Btn>
+                {slotOverrides && <Btn variant="ghost" onClick={handleResetSwaps}>Бастапқы рет</Btn>}
+              </div>
+            </div>
+            {slotOverrides && <div style={{ marginTop: '10px', padding: '8px 10px', borderRadius: '8px', background: '#fffbeb', color: '#92400e', fontSize: '12px' }}>⚡ Қолмен өзгертілген кесте. Өзгерістерді сақтау батырмасын басыңыз.</div>}
+            <div style={{ marginTop: '14px', fontSize: '11px', fontWeight: 800, color: '#64748b' }}>ОҚУШЫНЫ ТЕЗ ТАҢДАУ ҮШІН КЕСТЕДЕГІ АТЫН БАСЫҢЫЗ</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(190px, 1fr))', gap: '8px', marginTop: '8px', maxHeight: '220px', overflowY: 'auto' }}>
+              {effectiveSlots.map((slot, idx) => slot.map(s => {
+                const selected = s.id === swapStudentA || s.id === swapStudentB;
+                return <button key={`exam-slot-${idx}-${s.id}`} type="button" onClick={() => {
+                  if (!swapStudentA || swapStudentA === s.id) { setSwapStudentA(s.id); if (swapStudentA === s.id) setSwapStudentB(''); }
+                  else if (!swapStudentB) setSwapStudentB(s.id);
+                  else { setSwapStudentA(s.id); setSwapStudentB(''); }
+                }} style={{ textAlign: 'left', padding: '8px 10px', borderRadius: '8px', border: `1px solid ${selected ? '#818cf8' : '#e2e8f0'}`, background: selected ? '#eef2ff' : '#fff', color: '#334155', cursor: 'pointer', fontSize: '12px', fontWeight: 700 }}>
+                  {idx < 8 ? '1-бағана' : '2-бағана'} · {((idx % 8) + 1)}-қатар · {s.name}
+                </button>;
+              }))}
+            </div>
+          </section>
+        )}
 
         {/* Live SVG Poster 2 */}
         <div style={{ width: '100%', maxWidth: '1060px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
