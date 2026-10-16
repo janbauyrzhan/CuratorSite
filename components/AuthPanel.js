@@ -50,7 +50,11 @@ export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRe
         setInfo('Құпия сөз өзгертілді.');
         onRecoveryDone?.();
       } else if (mode === 'register') {
-        const { data, error: authError } = await supabase.auth.signUp({ email: email.trim(), password });
+        const { data, error: authError } = await supabase.auth.signUp({
+          email: email.trim(),
+          password,
+          options: { emailRedirectTo: window.location.origin },
+        });
         if (authError) throw authError;
         if (data.session && data.user) onAuth?.(data.user);
         else setInfo('Тіркелуді аяқтау үшін электрондық поштаңызға келген сілтемені ашыңыз.');
