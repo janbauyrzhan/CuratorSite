@@ -7,7 +7,7 @@
    2. «Сабақ тапсыру» (Exam Schedule with template2.svg)
    ══════════════════════════════════════════════════════════════════════════ */
 
-import { useState, useEffect, useMemo, useCallback } from 'react';
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Plus, Trash2, Download, Copy, LogOut, Sparkles, Users, Clock, Check, User, ArrowLeftRight, Shuffle
 } from 'lucide-react';
@@ -17,9 +17,10 @@ import ExamScheduler from './ExamScheduler';
 import {
   uid, makeSchedule, makeGenderedSchedule,
   parseStudents, normalizeText, normalizeGender,
-  loadUserGroups, saveUserGroups, getSession, clearSession,
+  getLegacyWorkspaces, clearLegacyCredentials,
   pairsToTSV,
 } from '@/lib/utils';
+import { getSupabaseClient } from '@/lib/supabaseClient';
 import {
   fillSvgTemplate, downloadSvgAsPng, RAW_SVG_TEMPLATE
 } from '@/lib/svgTemplate';
@@ -141,6 +142,14 @@ export default function App() {
   /* ── Strict Auth Guard State ────────────────────────────── */
   const [user, setUser] = useState(null);
   const [authLoaded, setAuthLoaded] = useState(false);
+  const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
+  const [workspaceError, setWorkspaceError] = useState('');
+  const [recoveryMode, setRecoveryMode] = useState(false);
+  const [legacyWorkspaces, setLegacyWorkspaces] = useState([]);
+  const [legacyImportId, setLegacyImportId] = useState('');
+  const [syncState, setSyncState] = useState('saved');
+  const hydrationId = useRef(0);
+  const supabase = useMemo(() => getSupabaseClient(), []);
 
   /* ── Tab Switcher State ('hub' | 'pairs' | 'exam') ──────────────── */
   const [activeTab, setActiveTab] = useState('hub');
@@ -198,67 +207,100 @@ export default function App() {
       });
   }, []);
 
-  /* ── 1. Strict User Isolation: Load on Mount ────────────── */
-  useEffect(() => {
-    const sess = getSession();
-    if (sess && sess.username) {
-      setUser(sess);
-      const userGroups = loadUserGroups(sess.username);
-      if (userGroups && Array.isArray(userGroups.groups) && userGroups.groups.length > 0) {
-        setGroups(userGroups.groups);
-        const targetGid = userGroups.activeGid || userGroups.groups[0]?.id;
-        setActiveGid(targetGid);
-        setWeekIdx(userGroups.weekIdx || 0);
-        setDivType(userGroups.divType || 'mixed');
-        const g = userGroups.groups.find(x => x.id === targetGid);
-        if (g) {
-          // Load INDEPENDENT student lists for each tab
-          setRawTextPairs(g.rawTextPairs || '');
-          setStudentsPairs(g.students_pairs || []);
-          setCustomPairsOrder(g.customPairsOrder || null);
-          setRawTextExam(g.rawTextExam || '');
-          setStudentsExam(g.students_exam || []);
-          setPairOverrides(g.pairOverrides || {});
-        }
-      } else {
-        // Absolutely clean state for this user (no foreign data)
-        setGroups([]);
-        setActiveGid(null);
-        setRawTextPairs('');
-        setStudentsPairs([]);
-        setCustomPairsOrder(null);
-        setRawTextExam('');
-        setStudentsExam([]);
-        setSchedule([]);
-        setPairOverrides({});
-        setWeekIdx(0);
-      }
-    } else {
-      setUser(null);
-      setGroups([]);
-      setActiveGid(null);
-      setRawTextPairs('');
-      setStudentsPairs([]);
-      setCustomPairsOrder(null);
-      setRawTextExam('');
-      setStudentsExam([]);
-      setSchedule([]);
-      setPairOverrides({});
-      setWeekIdx(0);
-    }
-    setAuthLoaded(true);
+  const resetWorkspace = useCallback(() => {
+    setGroups([]); setActiveGid(null); setRawTextPairs(''); setStudentsPairs([]);
+    setCustomPairsOrder(null); setRawTextExam(''); setStudentsExam([]);
+    setSchedule([]); setPairOverrides({}); setWeekIdx(0); setDivType('mixed');
   }, []);
 
-  /* ── 2. Persist State Scoped to Current Username ────────── */
+  const hydrateWorkspace = useCallback(async (authUser) => {
+    const requestId = ++hydrationId.current;
+    setWorkspaceLoaded(false);
+    setWorkspaceError('');
+    const { data, error } = await supabase
+      .from('user_workspaces')
+      .select('data')
+      .eq('user_id', authUser.id)
+      .maybeSingle();
+    if (requestId !== hydrationId.current) return;
+    if (error) {
+      setWorkspaceError(error.message || 'Cloud деректерін жүктеу мүмкін болмады.');
+      setWorkspaceLoaded(false);
+      return;
+    }
+
+    const workspace = data?.data || null;
+    const savedGroups = Array.isArray(workspace?.groups) ? workspace.groups : [];
+    setUser({ id: authUser.id, email: authUser.email, username: authUser.email?.split('@')[0] || 'Куратор' });
+    setGroups(savedGroups);
+    const selectedGid = workspace?.activeGid || savedGroups[0]?.id || null;
+    setActiveGid(selectedGid);
+    setWeekIdx(workspace?.weekIdx || 0);
+    setDivType(workspace?.divType || 'mixed');
+
+    const selectedGroup = savedGroups.find(g => g.id === selectedGid);
+    setRawTextPairs(selectedGroup?.rawTextPairs || '');
+    setStudentsPairs(selectedGroup?.students_pairs || []);
+    setCustomPairsOrder(selectedGroup?.customPairsOrder || null);
+    setRawTextExam(selectedGroup?.rawTextExam || '');
+    setStudentsExam(selectedGroup?.students_exam || []);
+    setPairOverrides(selectedGroup?.pairOverrides || {});
+
+    const localCopies = getLegacyWorkspaces();
+    setLegacyWorkspaces(savedGroups.length === 0 ? localCopies : []);
+    setLegacyImportId(savedGroups.length === 0 ? (localCopies[0]?.username || '') : '');
+    clearLegacyCredentials();
+    setWorkspaceLoaded(true);
+    setSyncState(data ? 'saved' : 'saving');
+  }, [supabase]);
+
+  /* ── Supabase Auth session and cloud workspace ──────────── */
   useEffect(() => {
-    if (!authLoaded || !user?.username) return;
-    saveUserGroups(user.username, {
-      groups,
-      activeGid,
-      weekIdx,
-      divType,
+    if (!supabase) {
+      setAuthLoaded(true);
+      return;
+    }
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setTimeout(() => {
+        if (event === 'INITIAL_SESSION' || event === 'SIGNED_IN' || event === 'PASSWORD_RECOVERY') {
+          if (session?.user) {
+            setRecoveryMode(event === 'PASSWORD_RECOVERY');
+            void hydrateWorkspace(session.user).then(() => setAuthLoaded(true));
+          } else {
+            hydrationId.current++;
+            setUser(null); setWorkspaceLoaded(false); setWorkspaceError('');
+            resetWorkspace(); setAuthLoaded(true);
+          }
+        } else if (event === 'SIGNED_OUT') {
+          hydrationId.current++;
+          setUser(null); setWorkspaceLoaded(false); setWorkspaceError('');
+          setRecoveryMode(false); setLegacyWorkspaces([]); resetWorkspace(); setAuthLoaded(true);
+        }
+      }, 0);
     });
-  }, [user, groups, activeGid, weekIdx, divType, authLoaded]);
+    return () => subscription.unsubscribe();
+  }, [supabase, hydrateWorkspace, resetWorkspace]);
+
+  /* ── Persist cloud workspace after edits ────────────────── */
+  useEffect(() => {
+    if (!supabase || !user?.id || !workspaceLoaded || workspaceError) return;
+    const data = { groups, activeGid, weekIdx, divType };
+    const timer = setTimeout(async () => {
+      setSyncState('saving');
+      const { error } = await supabase.from('user_workspaces').upsert({
+        user_id: user.id,
+        data,
+        updated_at: new Date().toISOString(),
+      }, { onConflict: 'user_id' });
+      if (error) {
+        setSyncState('error');
+        notify('Cloud-қа сақтау қатесі: ' + (error.message || 'Қайта көріңіз'));
+      } else {
+        setSyncState('saved');
+      }
+    }, 700);
+    return () => clearTimeout(timer);
+  }, [supabase, user, groups, activeGid, weekIdx, divType, workspaceLoaded, workspaceError, notify]);
 
   /* ── Rebuild Schedule when Pairs Students or Division Mode Changes */
   const orderedStudentsPairs = useMemo(() => {
@@ -388,9 +430,6 @@ export default function App() {
     setRawTextExam('');
     setStudentsExam([]);
     setWeekIdx(0);
-    if (user?.username) {
-      saveUserGroups(user.username, { groups: nextGroups, activeGid: g.id, weekIdx: 0, divType });
-    }
     notify(`"${g.name}" тобы сәтті жасалды`);
   }
 
@@ -406,9 +445,6 @@ export default function App() {
     setRawTextExam(ng?.rawTextExam || '');
     setStudentsExam(ng?.students_exam || []);
     setWeekIdx(0);
-    if (user?.username) {
-      saveUserGroups(user.username, { groups: next, activeGid: ng?.id || null, weekIdx: 0, divType });
-    }
   }
 
   function selectGroup(gid) {
@@ -453,14 +489,6 @@ export default function App() {
       return g;
     });
     setGroups(updated);
-    if (user?.username) {
-      saveUserGroups(user.username, {
-        groups: updated,
-        activeGid,
-        weekIdx,
-        divType,
-      });
-    }
     setSavedAnim(true);
     setTimeout(() => setSavedAnim(false), 2000);
     notify('Жұптық жұмыс деректері сақталды ✓');
@@ -488,14 +516,6 @@ export default function App() {
       return g;
     });
     setGroups(updated);
-    if (user?.username) {
-      saveUserGroups(user.username, {
-        groups: updated,
-        activeGid,
-        weekIdx,
-        divType,
-      });
-    }
     setSavedAnim(true);
     setTimeout(() => setSavedAnim(false), 2000);
     notify('«Сабақ тапсыру» баптаулары сақталды ✓');
@@ -793,73 +813,79 @@ export default function App() {
       .catch(() => notify('Көшіру қатесі орын алды'));
   }
 
-  /* ══ AUTH HANDLERS (Strict Isolation) ═══════════════════════ */
-  function handleAuth(u) {
-    setUser(u);
+  /* ══ AUTH HANDLERS ══════════════════════════════════════════ */
+  function handleAuth(authUser) {
+    if (!authUser) return;
+    setUser({ id: authUser.id, email: authUser.email, username: authUser.email?.split('@')[0] || 'Куратор' });
     setActiveTab('hub');
-    if (u && u.username) {
-      const userGroups = loadUserGroups(u.username);
-      if (userGroups && Array.isArray(userGroups.groups) && userGroups.groups.length > 0) {
-        setGroups(userGroups.groups);
-        const targetGid = userGroups.activeGid || userGroups.groups[0]?.id;
-        setActiveGid(targetGid);
-        setWeekIdx(userGroups.weekIdx || 0);
-        setDivType(userGroups.divType || 'mixed');
-        const g = userGroups.groups.find(x => x.id === targetGid);
-        if (g) {
-          setRawTextPairs(g.rawTextPairs || '');
-          setStudentsPairs(g.students_pairs || []);
-          setRawTextExam(g.rawTextExam || '');
-          setStudentsExam(g.students_exam || []);
-          setPairOverrides(g.pairOverrides || {});
-        }
-      } else {
-        // Absolutely clean state for a new curator
-        setGroups([]);
-        setActiveGid(null);
-        setRawTextPairs('');
-        setStudentsPairs([]);
-        setRawTextExam('');
-        setStudentsExam([]);
-        setSchedule([]);
-        setPairOverrides({});
-        setWeekIdx(0);
-        setDivType('mixed');
-      }
-      notify(`Қош келдіңіз, ${u.username}!`);
-    }
   }
 
-  function logout() {
-    clearSession();
-    setUser(null);
-    // Completely clear all app state upon logout
-    setGroups([]);
-    setActiveGid(null);
-    setRawTextPairs('');
-    setStudentsPairs([]);
-    setRawTextExam('');
-    setStudentsExam([]);
-    setSchedule([]);
-    setPairOverrides({});
-    setWeekIdx(0);
-    setDivType('mixed');
+  async function importLocalWorkspace() {
+    const source = legacyWorkspaces.find(item => item.username === legacyImportId);
+    if (!source || !user?.id || !supabase) return;
+    setSyncState('saving');
+    const { error } = await supabase.from('user_workspaces').upsert({
+      user_id: user.id,
+      data: source.data,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: 'user_id' });
+    if (error) {
+      setSyncState('error');
+      notify('Деректерді импорттау мүмкін болмады: ' + error.message);
+      return;
+    }
+
+    const importedGroups = Array.isArray(source.data.groups) ? source.data.groups : [];
+    const importedActiveGid = source.data.activeGid || importedGroups[0]?.id || null;
+    const selectedGroup = importedGroups.find(g => g.id === importedActiveGid);
+    setGroups(importedGroups);
+    setActiveGid(importedActiveGid);
+    setWeekIdx(source.data.weekIdx || 0);
+    setDivType(source.data.divType || 'mixed');
+    setRawTextPairs(selectedGroup?.rawTextPairs || '');
+    setStudentsPairs(selectedGroup?.students_pairs || []);
+    setCustomPairsOrder(selectedGroup?.customPairsOrder || null);
+    setRawTextExam(selectedGroup?.rawTextExam || '');
+    setStudentsExam(selectedGroup?.students_exam || []);
+    setPairOverrides(selectedGroup?.pairOverrides || {});
+    setLegacyWorkspaces([]);
+    setSyncState('saved');
+    notify('Осы браузердегі топтар аккаунтыңызға көшірілді ✓');
+  }
+
+  async function logout() {
+    if (supabase) await supabase.auth.signOut();
     setNewName('');
     setNewSubject('');
     setShowNewGroup(false);
-    notify('Шықтыңыз');
+    notify('Аккаунттан шықтыңыз');
   }
 
   /* ══════════════════════════════════════════════════════════════
      STRICT AUTH GUARD: IF NOT LOGGED IN, RENDER ONLY AUTH FORM
      ══════════════════════════════════════════════════════════════ */
-  if (authLoaded && !user) {
+  if (authLoaded && (!user || recoveryMode)) {
     return (
       <>
-        <AuthPanel onAuth={handleAuth} />
+        <AuthPanel supabase={supabase} onAuth={handleAuth} recoveryMode={recoveryMode} onRecoveryDone={() => setRecoveryMode(false)} />
         {toast && <Toast msg={toast} onHide={() => setToast('')} />}
       </>
     );
+  }
+
+  if (!authLoaded || (user && !workspaceLoaded && !workspaceError)) {
+    return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', color: '#475569', fontWeight: 700 }}>Cloud аккаунт жүктелуде...</div>;
+  }
+
+  if (workspaceError) {
+    return <div style={{ minHeight: '100vh', display: 'grid', placeItems: 'center', padding: '24px', background: '#f8fafc' }}>
+      <div style={{ maxWidth: '520px', background: '#fff', borderRadius: '16px', padding: '24px', boxShadow: '0 10px 35px rgba(15,23,42,.08)' }}>
+        <h2 style={{ margin: '0 0 10px', color: '#991b1b' }}>Cloud деректерін жүктеу қатесі</h2>
+        <p style={{ color: '#475569', lineHeight: 1.6 }}>{workspaceError}</p>
+        <p style={{ color: '#64748b', fontSize: '13px' }}>Деректерді жоғалтпау үшін жұмыс кеңістігі ашылған жоқ. Supabase кестесі мен кіру баптауларын тексеріңіз.</p>
+        <Btn variant="ghost" onClick={logout}>Аккаунттан шығу</Btn>
+      </div>
+    </div>;
   }
 
   /* ══════════════════════════════════════════════════════════════
@@ -964,11 +990,27 @@ export default function App() {
               </span>
             </div>
           )}
+          <span title={syncState === 'error' ? 'Соңғы деректер cloud-қа сақталмады' : syncState === 'saving' ? 'Cloud-қа сақталып жатыр' : 'Cloud-та сақталды'} style={{ fontSize: '11px', fontWeight: 700, color: syncState === 'error' ? '#b91c1c' : syncState === 'saving' ? '#a16207' : '#15803d' }}>
+            {syncState === 'saving' ? 'Сақталуда…' : syncState === 'error' ? 'Сақтау қатесі' : 'Cloud-та сақталды ✓'}
+          </span>
           <Btn variant="ghost" size="sm" onClick={logout}>
             <LogOut size={13} />Шығу
           </Btn>
         </div>
       </header>
+
+      {legacyWorkspaces.length > 0 && groups.length === 0 && (
+        <div style={{ margin: '12px 20px 0', padding: '12px 16px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '12px', flexWrap: 'wrap' }}>
+          <div style={{ minWidth: '220px', flex: 1 }}>
+            <div style={{ fontWeight: 800, color: '#854d0e', fontSize: '13px' }}>Осы браузерден бұрынғы топтарды импорттау</div>
+            <div style={{ color: '#92400e', fontSize: '12px', marginTop: '3px' }}>Таңдалған топтар мен оқушылар тізімі Supabase аккаунтыңызға жіберіліп, басқа құрылғыларда ашылады.</div>
+          </div>
+          <select aria-label="Импортталатын жергілікті кабинет" value={legacyImportId} onChange={e => setLegacyImportId(e.target.value)} style={{ padding: '8px 10px', border: '1px solid #fcd34d', borderRadius: '8px', background: '#fff', maxWidth: '220px' }}>
+            {legacyWorkspaces.map(copy => <option key={copy.username} value={copy.username}>{copy.username} · {copy.data.groups.length} топ</option>)}
+          </select>
+          <Btn onClick={importLocalWorkspace} disabled={!legacyImportId || syncState === 'saving'}>Бұлтқа импорттау</Btn>
+        </div>
+      )}
 
       {/* ══ WORKSPACE CONTENT: HUB vs TAB 1 vs TAB 2 ════════════ */}
       {activeTab === 'hub' ? (
