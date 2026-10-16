@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  Plus, Trash2, Download, Copy, LogOut, Sparkles, Users, Clock, Check, User, ArrowLeftRight, Shuffle
+  Plus, Trash2, Download, Copy, LogOut, GraduationCap, Users, Clock, Check, User, ArrowLeftRight, Shuffle, Eye, EyeOff, MessageCircle
 } from 'lucide-react';
 import AuthPanel     from './AuthPanel';
 import Poster        from './Poster';
@@ -62,7 +62,7 @@ const DEMO_STUDENTS_TEXT = `Болатұлы Нұрдәулет 87754615707
 /* ══════════════════════════════════════════════════════════════
    UI Primitives
    ══════════════════════════════════════════════════════════════ */
-function Btn({ children, onClick, variant = 'primary', size = 'md', disabled = false, fullWidth = false, sx = {} }) {
+function Btn({ children, onClick, variant = 'primary', size = 'md', disabled = false, fullWidth = false, sx = {}, ...buttonProps }) {
   const vars = {
     primary: { bg: BRAND,         fg: '#fff',     border: 'none' },
     ghost:   { bg: '#fff',        fg: '#374151', border: '1.5px solid #e5e7eb' },
@@ -73,6 +73,7 @@ function Btn({ children, onClick, variant = 'primary', size = 'md', disabled = f
   return (
     <button
       onClick={disabled ? undefined : onClick}
+      {...buttonProps}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: '6px',
         padding: size === 'sm' ? '6px 12px' : '9px 16px',
@@ -177,6 +178,7 @@ export default function App() {
   const [schedule,       setSchedule]       = useState([]);
   const [pairOverrides,  setPairOverrides]  = useState({});
   const [showSwapModal,  setShowSwapModal]  = useState(false);
+  const [showPhonesOnPoster, setShowPhonesOnPoster] = useState(false);
   const [swapStudentA,   setSwapStudentA]   = useState('');
   const [swapStudentB,   setSwapStudentB]   = useState('');
 
@@ -364,8 +366,9 @@ export default function App() {
       weekText,
       subjectText,
       pairs: currentPairs,
+      showPhones: showPhonesOnPoster,
     });
-  }, [svgTemplate, weekText, subjectText, currentPairs]);
+  }, [svgTemplate, weekText, subjectText, currentPairs, showPhonesOnPoster]);
 
   /* ══ DEMO ONBOARDING ACTION (Pairs only, scoped to active group) ══ */
   function insertDemoData() {
@@ -399,7 +402,7 @@ export default function App() {
       ? { ...g, rawTextPairs: DEMO_STUDENTS_TEXT, students_pairs: parsed, customPairsOrder: null, genderMap: gMap, pairOverrides: {} }
       : g
     ));
-    notify('✨ 28 оқушының демо-үлгісі сәтті қойылды!');
+    notify('28 оқушының демо-үлгісі сәтті қойылды!');
   }
 
   /* ══ GROUP ACTIONS ══════════════════════════════════════════ */
@@ -892,7 +895,7 @@ export default function App() {
      AUTHENTICATED WORKSPACE
      ══════════════════════════════════════════════════════════════ */
   return (
-    <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
+    <div className="app-shell" style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: '#f8fafc' }}>
 
       {/* ══ TOP BAR: LOGO, TWO TABS, USERNAME & LOGOUT ONLY ═════ */}
       <header style={{
@@ -900,12 +903,13 @@ export default function App() {
         borderBottom: '1.5px solid #e5e7eb',
         display: 'flex', alignItems: 'center', justifyContent: 'space-between',
         padding: '0 24px', flexShrink: 0, zIndex: 10,
-      }}>
+      }} className="app-header">
         {/* Brand & Navigation */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }} className="app-header-left">
           <div
             onClick={() => setActiveTab('hub')}
             style={{ display: 'flex', alignItems: 'center', gap: '6px', cursor: 'pointer' }}
+            className="app-brand"
             title="Басты мәзірге өту"
           >
             <span style={{ fontSize: '20px', fontWeight: 900, letterSpacing: '-0.5px', color: '#111827' }}>
@@ -923,7 +927,7 @@ export default function App() {
 
           {/* Navigation Controls: If in workspace, show «← Басты мәзірге» and 2 Tabs */}
           {activeTab !== 'hub' ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} className="app-nav">
               <button
                 type="button"
                 onClick={() => setActiveTab('hub')}
@@ -961,7 +965,7 @@ export default function App() {
                     fontSize: '13px', fontWeight: 700, transition: 'all .15s',
                     display: 'flex', alignItems: 'center', gap: '6px',
                     background: activeTab === 'exam' ? '#fff' : 'transparent',
-                    color: activeTab === 'exam' ? '#E52E2E' : '#6b7280',
+                    color: activeTab === 'exam' ? BRAND : '#6b7280',
                     boxShadow: activeTab === 'exam' ? '0 1px 4px rgba(0,0,0,0.08)' : 'none',
                   }}
                 >
@@ -977,7 +981,7 @@ export default function App() {
         </div>
 
         {/* User Auth Info & Logout Button */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }} className="app-account">
           {user && (
             <div style={{
               display: 'flex', alignItems: 'center', gap: '6px',
@@ -1026,7 +1030,7 @@ export default function App() {
                 borderRadius: '999px', padding: '5px 16px',
                 fontSize: '12.5px', fontWeight: 800, color: BRAND
               }}>
-                <Sparkles size={14} /> infoLogia • Куратордың жеке кабинеті
+                <GraduationCap size={14} /> infoLogia • Куратордың жеке кабинеті
               </div>
               <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.5px' }}>
                 Жұмыс жасау үшін қажетті модульді таңдаңыз
@@ -1132,7 +1136,7 @@ export default function App() {
                 </button>
               </div>
 
-              {/* Card 2: САБАҚ ТАПСЫРУ (Red #E52E2E) */}
+              {/* Card 2: САБАҚ ТАПСЫРУ */}
               <div
                 onClick={() => setActiveTab('exam')}
                 style={{
@@ -1149,9 +1153,9 @@ export default function App() {
                   boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
                 }}
                 onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = '#E52E2E';
+                  e.currentTarget.style.borderColor = BRAND;
                   e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 14px 34px rgba(229, 46, 46, 0.12)';
+                  e.currentTarget.style.boxShadow = '0 14px 34px rgba(29, 53, 151, 0.12)';
                 }}
                 onMouseLeave={e => {
                   e.currentTarget.style.borderColor = '#e2e8f0';
@@ -1163,14 +1167,14 @@ export default function App() {
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <div style={{
                       width: '48px', height: '48px', borderRadius: '14px',
-                      background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: '#E52E2E'
+                      background: '#eef1fb', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: BRAND
                     }}>
                       <Clock size={26} />
                     </div>
                     <span style={{
-                      fontSize: '11px', fontWeight: 800, color: '#E52E2E',
-                      background: '#fef2f2', padding: '4px 10px', borderRadius: '6px'
+                      fontSize: '11px', fontWeight: 800, color: BRAND,
+                      background: '#eef1fb', padding: '4px 10px', borderRadius: '6px'
                     }}>
                       16 СЛОТТЫҚ КЕСТЕ
                     </span>
@@ -1187,16 +1191,16 @@ export default function App() {
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                      <Check size={16} color="#E52E2E" /> 16 слоттық құрылым (әрқайсысында 2 оқушы)
+                      <Check size={16} color={BRAND} /> 16 слоттық құрылым (әрқайсысында 2 оқушы)
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                      <Check size={16} color="#E52E2E" /> Бір күнде қатарынан немесе екі күнге бөлу
+                      <Check size={16} color={BRAND} /> Бір күнде қатарынан немесе екі күнге бөлу
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                      <Check size={16} color="#E52E2E" /> 10, 15, 20 минуттық автоматты уақыт есебі
+                      <Check size={16} color={BRAND} /> 10, 15, 20 минуттық автоматты уақыт есебі
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                      <Check size={16} color="#E52E2E" /> PNG сурет және WhatsApp кестесін көшіру
+                      <Check size={16} color={BRAND} /> PNG сурет және WhatsApp кестесін көшіру
                     </div>
                   </div>
                 </div>
@@ -1208,7 +1212,7 @@ export default function App() {
                     padding: '13px 20px',
                     borderRadius: '10px',
                     border: 'none',
-                    background: '#E52E2E',
+                    background: BRAND,
                     color: '#ffffff',
                     fontSize: '14px',
                     fontWeight: 800,
@@ -1217,7 +1221,7 @@ export default function App() {
                     alignItems: 'center',
                     justifyContent: 'center',
                     gap: '6px',
-                    boxShadow: '0 4px 14px rgba(229, 46, 46, 0.25)',
+                    boxShadow: '0 4px 14px rgba(29, 53, 151, 0.2)',
                     transition: 'all .15s',
                   }}
                 >
@@ -1231,10 +1235,10 @@ export default function App() {
         </div>
       ) : activeTab === 'pairs' ? (
         /* ════ TAB 1: «ЖҰПТЫҚ ЖҰМЫС» PAIRS GENERATOR ═══════════ */
-        <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        <div className="pair-workspace" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
           {/* ════ LEFT PANEL: Settings & Student List ═══════════ */}
-          <aside style={{
+          <aside className="workspace-sidebar" style={{
             width: '360px', flexShrink: 0,
             background: '#fff', borderRight: '1.5px solid #e5e7eb',
             overflowY: 'auto', padding: '20px',
@@ -1377,7 +1381,7 @@ export default function App() {
                           transition: 'all .15s'
                         }}
                       >
-                        ✨ Үлгіні қою
+                        <Plus size={12} />Үлгіні қою
                       </button>
                     </div>
                     <textarea
@@ -1644,7 +1648,7 @@ export default function App() {
           </aside>
 
           {/* ════ RIGHT PANEL: Real-Time Canva SVG Live Poster ════ */}
-          <main style={{
+          <main className="workspace-main" style={{
             flex: 1, overflowY: 'auto', background: '#f1f5f9',
             padding: '24px', display: 'flex', flexDirection: 'column',
             gap: '14px', alignItems: 'center',
@@ -1664,7 +1668,7 @@ export default function App() {
                     width: '40px', height: '40px', borderRadius: '10px',
                     background: '#eef1fb', color: BRAND, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0
                   }}>
-                    <Sparkles size={20} />
+                    <GraduationCap size={20} />
                   </div>
                   <div>
                     <div style={{ fontSize: '15px', fontWeight: 800, color: '#111827', marginBottom: '6px' }}>
@@ -1678,13 +1682,13 @@ export default function App() {
                   </div>
                 </div>
                 <Btn variant="primary" size="sm" onClick={insertDemoData} sx={{ flexShrink: 0, padding: '8px 14px' }}>
-                  ✨ Үлгіні қою (Демо 28 оқушы)
+                  <Plus size={14} />Үлгіні қою (Демо 28 оқушы)
                 </Btn>
               </div>
             )}
 
             {/* Action Toolbar */}
-            <div style={{ width: '100%', maxWidth: '1020px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+            <div className="workspace-toolbar" style={{ width: '100%', maxWidth: '1020px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
               {/* 1. Download PNG (Green) */}
               <Btn variant="success" onClick={downloadPNG}>
                 <Download size={14} />Суретті жүктеу (PNG)
@@ -1692,12 +1696,22 @@ export default function App() {
 
               {/* 2. Copy WhatsApp text */}
               <Btn variant="ghost" onClick={copyWhatsApp}>
-                💬 WhatsApp мәтінін көшіру
+                <MessageCircle size={14} />WhatsApp мәтінін көшіру
               </Btn>
 
               {/* 3. Copy TSV for Excel (White) */}
               <Btn variant="ghost" onClick={copyTSV}>
                 <Copy size={14} />Тізімді көшіру (Excel)
+              </Btn>
+
+              <Btn
+                variant="ghost"
+                onClick={() => setShowPhonesOnPoster(v => !v)}
+                aria-pressed={showPhonesOnPoster}
+                title={showPhonesOnPoster ? 'Постерден телефон нөмірлерін жасыру' : 'Постерде телефон нөмірлерін көрсету'}
+              >
+                {showPhonesOnPoster ? <EyeOff size={14} /> : <Eye size={14} />}
+                {showPhonesOnPoster ? 'Телефондарды жасыру' : 'Телефондарды көрсету'}
               </Btn>
 
               {/* 4. Manual Pair Adjustment / Swap Toggle Button */}
@@ -1711,7 +1725,7 @@ export default function App() {
                   fontWeight: 700,
                 }}
               >
-                <ArrowLeftRight size={14} /> ✍️ Осы аптадағы жұптарды өзгерту / Своп {pairOverrides[safeWeek] ? '⚡ (Өзгертілген)' : ''}
+                <ArrowLeftRight size={14} /> Осы аптадағы жұптарды өзгерту / Своп {pairOverrides[safeWeek] ? '(Өзгертілген)' : ''}
               </Btn>
 
               <div style={{ flex: 1 }} />

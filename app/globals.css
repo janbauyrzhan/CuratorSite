@@ -10,6 +10,41 @@
 html, body { height: 100%; }
 body { font-family: var(--font-open-sans), 'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif; background: #f8fafc; color: #111827; }
 
+button, input, select, textarea { font: inherit; }
+button { -webkit-tap-highlight-color: transparent; }
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
+  outline: 3px solid rgba(29, 53, 151, 0.42);
+  outline-offset: 2px;
+}
+
+@media (max-width: 900px) {
+  .app-header { height: auto !important; min-height: 56px; padding: 10px 14px !important; gap: 10px; flex-wrap: wrap; }
+  .app-header-left { gap: 10px !important; flex-wrap: wrap; }
+  .app-brand > span:nth-child(2) { display: none; }
+  .app-nav { flex-wrap: wrap; }
+  .app-account { gap: 8px !important; margin-left: auto; }
+  .app-shell { height: 100dvh !important; min-height: 100dvh; }
+  .dashboard-shell { padding: 22px 16px 32px !important; }
+}
+
+@media (max-width: 700px) {
+  .app-header { align-items: flex-start !important; }
+  .app-header-left { flex: 1 1 100%; }
+  .app-nav { width: 100%; gap: 6px !important; }
+  .app-nav > button { white-space: nowrap; }
+  .app-account { width: 100%; justify-content: space-between; }
+  .pair-workspace { min-height: 0; flex-direction: column !important; overflow: hidden !important; }
+  .workspace-sidebar { width: 100% !important; min-height: 0; max-height: 42dvh; flex: 0 1 auto !important; border-right: 0 !important; border-bottom: 1px solid #e2e8f0; padding: 14px !important; gap: 12px !important; }
+  .workspace-main { min-height: 0; width: 100%; flex: 1 1 0 !important; padding: 14px !important; gap: 12px !important; }
+  .workspace-toolbar { gap: 6px !important; }
+  .workspace-toolbar > button { flex: 1 1 calc(50% - 6px); min-width: 145px; justify-content: center; }
+  .dashboard-shell { padding: 16px 12px 24px !important; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { scroll-behavior: auto !important; animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; }
+}
+
 ::-webkit-scrollbar { width: 5px; height: 5px; }
 ::-webkit-scrollbar-track { background: #f1f5f9; }
 ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 999px; }

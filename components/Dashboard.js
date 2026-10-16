@@ -7,11 +7,23 @@
 
 import { useState } from 'react';
 import {
-  Users, Clock, ArrowRight, Sparkles, Plus, GraduationCap, CheckCircle2, ChevronRight, Layers,
+  Users, Clock, ArrowRight, Plus, GraduationCap, Layers, Shuffle, CalendarDays, MessageCircle,
 } from 'lucide-react';
 
 const BRAND_BLUE = '#1D3597';
-const BRAND_RED  = '#E52E2E';
+const BRAND = BRAND_BLUE;
+const PAIR_FEATURES = [
+  { Icon: Shuffle, label: 'Қайталанбайтын жұптар' },
+  { Icon: Users, label: 'Жынысы бойынша / Аралас' },
+  { Icon: Users, label: '2+1 Үшеу тройка' },
+  { Icon: Layers, label: 'Excel (TSV) көшіру' },
+];
+const EXAM_FEATURES = [
+  { Icon: Clock, label: '10, 15, 20 мин интервалдар' },
+  { Icon: Users, label: '16 тайм-слот (32 оқушы)' },
+  { Icon: CalendarDays, label: '1-ші және 2-ші ауысым' },
+  { Icon: MessageCircle, label: 'WhatsApp-қа дайын кесте' },
+];
 
 export default function Dashboard({
   user,
@@ -30,12 +42,12 @@ export default function Dashboard({
     <div style={{
       flex: 1,
       overflowY: 'auto',
-      background: 'linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%)',
+      background: '#f1f5f9',
       padding: '32px 24px 48px',
       display: 'flex',
       flexDirection: 'column',
       alignItems: 'center',
-    }}>
+    }} className="dashboard-shell">
       <div style={{ width: '100%', maxWidth: '1120px', display: 'flex', flexDirection: 'column', gap: '28px' }}>
 
         {/* ══ 1. WELCOME BANNER ═════════════════════════════════ */}
@@ -55,9 +67,9 @@ export default function Dashboard({
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px' }}>
             <div style={{
               width: '48px', height: '48px', borderRadius: '14px',
-              background: 'linear-gradient(135deg, #1D3597 0%, #2b4cc4 100%)',
-              color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-              boxShadow: '0 4px 14px rgba(29, 53, 151, 0.25)', flexShrink: 0,
+              background: '#eef1fb',
+              color: BRAND_BLUE, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              flexShrink: 0,
             }}>
               <GraduationCap size={26} />
             </div>
@@ -148,19 +160,19 @@ export default function Dashboard({
             onMouseLeave={() => setHoveredCard(null)}
             style={{
               background: '#ffffff',
-              borderRadius: '24px',
-              border: '2px solid',
+              borderRadius: '16px',
+              border: '1.5px solid',
               borderColor: hoveredCard === 'pairs' ? BRAND_BLUE : '#e2e8f0',
               padding: '28px',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
               cursor: 'pointer',
-              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-              transform: hoveredCard === 'pairs' ? 'translateY(-6px)' : 'translateY(0)',
+              transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
+              transform: hoveredCard === 'pairs' ? 'translateY(-2px)' : 'translateY(0)',
               boxShadow: hoveredCard === 'pairs'
-                ? '0 20px 40px rgba(29, 53, 151, 0.12)'
-                : '0 4px 20px rgba(0, 0, 0, 0.04)',
+                ? '0 8px 20px rgba(29, 53, 151, 0.08)'
+                : '0 2px 8px rgba(15, 23, 42, 0.03)',
               position: 'relative',
               overflow: 'hidden',
             }}
@@ -168,10 +180,9 @@ export default function Dashboard({
             {/* Top accent badge */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
               <div style={{
-                width: '52px', height: '52px', borderRadius: '16px',
-                background: 'linear-gradient(135deg, #1D3597 0%, #2b4cc4 100%)',
-                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 6px 16px rgba(29, 53, 151, 0.28)',
+                width: '48px', height: '48px', borderRadius: '12px',
+                background: '#eef1fb',
+                color: BRAND_BLUE, display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <Users size={26} />
               </div>
@@ -196,12 +207,13 @@ export default function Dashboard({
 
             {/* Feature Pills */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '24px' }}>
-              {['🔄 Қайталанбайтын жұптар', '👫 Жынысы бойынша / Аралас', '⚡ 2+1 Үшеу тройка', '📋 Excel (TSV) көшіру'].map((t, idx) => (
-                <span key={idx} style={{
+              {PAIR_FEATURES.map(({ Icon, label }) => (
+                <span key={label} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '5px',
                   fontSize: '11px', fontWeight: 700, background: '#f8fafc',
                   border: '1px solid #e2e8f0', color: '#334155',
                   padding: '3px 9px', borderRadius: '7px',
-                }}>{t}</span>
+                }}><Icon size={12} aria-hidden="true" />{label}</span>
               ))}
             </div>
 
@@ -224,15 +236,9 @@ export default function Dashboard({
                 alt="Жұптық жұмыс постер үлгісі"
                 style={{
                   width: '100%', height: '100%', objectFit: 'cover',
-                  transition: 'transform 0.3s ease',
-                  transform: hoveredCard === 'pairs' ? 'scale(1.04)' : 'scale(1)',
+                  display: 'block',
                 }}
               />
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(180deg, rgba(29,53,151,0.05) 0%, rgba(29,53,151,0.25) 100%)',
-                pointerEvents: 'none',
-              }} />
             </div>
 
             {/* Action Button */}
@@ -260,26 +266,26 @@ export default function Dashboard({
             </button>
           </div>
 
-          {/* ── CARD 2: САБАҚ ТАПСЫРУ (Red #E52E2E) ─────────── */}
+          {/* ── CARD 2: САБАҚ ТАПСЫРУ ──────────────────────── */}
           <div
             onClick={() => onNavigate('exam')}
             onMouseEnter={() => setHoveredCard('exam')}
             onMouseLeave={() => setHoveredCard(null)}
             style={{
               background: '#ffffff',
-              borderRadius: '24px',
-              border: '2px solid',
-              borderColor: hoveredCard === 'exam' ? BRAND_RED : '#e2e8f0',
+              borderRadius: '16px',
+              border: '1.5px solid',
+              borderColor: hoveredCard === 'exam' ? BRAND : '#e2e8f0',
               padding: '28px',
               display: 'flex',
               flexDirection: 'column',
               justifyContent: 'space-between',
               cursor: 'pointer',
-              transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
-              transform: hoveredCard === 'exam' ? 'translateY(-6px)' : 'translateY(0)',
+              transition: 'border-color 0.15s, box-shadow 0.15s, transform 0.15s',
+              transform: hoveredCard === 'exam' ? 'translateY(-2px)' : 'translateY(0)',
               boxShadow: hoveredCard === 'exam'
-                ? '0 20px 40px rgba(229, 46, 46, 0.12)'
-                : '0 4px 20px rgba(0, 0, 0, 0.04)',
+                ? '0 8px 20px rgba(29, 53, 151, 0.08)'
+                : '0 2px 8px rgba(15, 23, 42, 0.03)',
               position: 'relative',
               overflow: 'hidden',
             }}
@@ -287,16 +293,15 @@ export default function Dashboard({
             {/* Top accent badge */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '20px' }}>
               <div style={{
-                width: '52px', height: '52px', borderRadius: '16px',
-                background: 'linear-gradient(135deg, #E52E2E 0%, #f04848 100%)',
-                color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 6px 16px rgba(229, 46, 46, 0.28)',
+                width: '48px', height: '48px', borderRadius: '12px',
+                background: '#eef1fb',
+                color: BRAND, display: 'flex', alignItems: 'center', justifyContent: 'center',
               }}>
                 <Clock size={26} />
               </div>
               <span style={{
-                fontSize: '11px', fontWeight: 800, background: '#fef2f2',
-                color: BRAND_RED, border: '1px solid #fecaca',
+                fontSize: '11px', fontWeight: 800, background: '#eef1fb',
+                color: BRAND, border: '1px solid #c7d2fe',
                 padding: '4px 12px', borderRadius: '999px', letterSpacing: '.05em',
               }}>
                 ТАЙМ-СЛОТТАР · ЕМТИХАН
@@ -315,12 +320,13 @@ export default function Dashboard({
 
             {/* Feature Pills */}
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px', marginBottom: '24px' }}>
-              {['⏱️ 10, 15, 20 мин интервалдар', '👥 16 тайм-слот (32 оқушы)', '📅 1-ші және 2-ші ауысым', '💬 WhatsApp-қа дайын кесте'].map((t, idx) => (
-                <span key={idx} style={{
+              {EXAM_FEATURES.map(({ Icon, label }) => (
+                <span key={label} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: '5px',
                   fontSize: '11px', fontWeight: 700, background: '#f8fafc',
                   border: '1px solid #e2e8f0', color: '#334155',
                   padding: '3px 9px', borderRadius: '7px',
-                }}>{t}</span>
+                }}><Icon size={12} aria-hidden="true" />{label}</span>
               ))}
             </div>
 
@@ -343,22 +349,16 @@ export default function Dashboard({
                 alt="Сабақ тапсыру кесте үлгісі"
                 style={{
                   width: '100%', height: '100%', objectFit: 'cover',
-                  transition: 'transform 0.3s ease',
-                  transform: hoveredCard === 'exam' ? 'scale(1.04)' : 'scale(1)',
+                  display: 'block',
                 }}
               />
-              <div style={{
-                position: 'absolute', inset: 0,
-                background: 'linear-gradient(180deg, rgba(229,46,46,0.05) 0%, rgba(229,46,46,0.25) 100%)',
-                pointerEvents: 'none',
-              }} />
             </div>
 
             {/* Action Button */}
             <button
               style={{
                 width: '100%',
-                background: BRAND_RED,
+                background: BRAND,
                 color: '#ffffff',
                 border: 'none',
                 borderRadius: '12px',
@@ -370,7 +370,7 @@ export default function Dashboard({
                 alignItems: 'center',
                 justifyContent: 'center',
                 gap: '8px',
-                boxShadow: '0 4px 14px rgba(229, 46, 46, 0.25)',
+                boxShadow: '0 4px 14px rgba(29, 53, 151, 0.2)',
                 transition: 'background 0.15s, transform 0.15s',
               }}
             >
@@ -394,7 +394,7 @@ export default function Dashboard({
           boxShadow: '0 2px 10px rgba(0, 0, 0, 0.02)',
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-            <Sparkles size={18} color={BRAND_BLUE} />
+            <GraduationCap size={18} color={BRAND_BLUE} />
             <span style={{ fontSize: '13px', color: '#334155', fontWeight: 600 }}>
               Жүйені сынап көргіңіз келе ме? Бір кликпен 28 оқушының дайын үлгісін жүктеңіз:
             </span>
@@ -412,7 +412,7 @@ export default function Dashboard({
               transition: 'all .15s',
             }}
           >
-            ✨ Үлгіні қою (Демо-тест)
+            <Plus size={14} />Үлгіні қою (Демо-тест)
           </button>
         </div>
 

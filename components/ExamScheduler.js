@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Download, Shuffle, Clock, Plus, Trash2, Check, ArrowLeftRight,
+  Download, Shuffle, Clock, Plus, Trash2, Check, ArrowLeftRight, MessageCircle,
 } from 'lucide-react';
 import {
   fillSvgTemplate2, downloadSvg2AsPng, addMinutesToTime, RAW_SVG_TEMPLATE2,
@@ -391,10 +391,10 @@ export default function ExamScheduler({
 
   /* ──────────────────────────────────────────────────────────── */
   return (
-    <div style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+    <div className="pair-workspace" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
       {/* ════ LEFT PANEL: Settings & Group Management ═════════ */}
-      <aside style={{
+      <aside className="workspace-sidebar" style={{
         width: '360px', flexShrink: 0,
         background: '#fff', borderRight: '1.5px solid #e5e7eb',
         overflowY: 'auto', padding: '20px',
@@ -672,7 +672,7 @@ export default function ExamScheduler({
                       transition: 'all .15s'
                     }}
                   >
-                    ✨ Үлгіні қою (телефонсыз)
+                    <Plus size={12} />Үлгіні қою (телефонсыз)
                   </button>
                 </div>
                 <textarea
@@ -791,14 +791,14 @@ export default function ExamScheduler({
       </aside>
 
       {/* ════ RIGHT PANEL: Live Canvas SVG Poster ════════════ */}
-      <main style={{
+      <main className="workspace-main" style={{
         flex: 1, overflowY: 'auto', background: '#f1f5f9',
         padding: '24px', display: 'flex', flexDirection: 'column',
         gap: '14px', alignItems: 'center',
       }}>
 
         {/* Action Toolbar */}
-        <div style={{ width: '100%', maxWidth: '1060px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
+        <div className="workspace-toolbar" style={{ width: '100%', maxWidth: '1060px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
           {/* 1. Download PNG */}
           <Btn variant="success" onClick={downloadPNG}>
             <Download size={14} />Суретті жүктеу (PNG)
@@ -806,10 +806,10 @@ export default function ExamScheduler({
 
           {/* 2. Copy WhatsApp text */}
           <Btn variant="ghost" onClick={copyWhatsApp}>
-            💬 WhatsApp мәтінін көшіру
+            <MessageCircle size={14} />WhatsApp мәтінін көшіру
           </Btn>
           <Btn variant="ghost" onClick={() => setShowSwapModal(v => !v)}>
-            <ArrowLeftRight size={14} /> ✍️ Оқушылар орнын өзгерту / Своп
+            <ArrowLeftRight size={14} /> Оқушылар орнын өзгерту / Своп
           </Btn>
         </div>
 
