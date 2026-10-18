@@ -191,7 +191,7 @@ export default function Dashboard({
                 color: BRAND_BLUE, border: '1px solid #bfdbfe',
                 padding: '4px 12px', borderRadius: '999px', letterSpacing: '.05em',
               }}>
-                16 АПТА · КАРУСЕЛЬ
+                25 АПТА · КАРУСЕЛЬ
               </span>
             </div>
 
@@ -201,7 +201,7 @@ export default function Dashboard({
                 ЖҰПТЫҚ ЖҰМЫС
               </h2>
               <p style={{ fontSize: '14px', color: '#4b5563', lineHeight: 1.6, margin: 0, fontWeight: 500 }}>
-                Сыныпты 25 аптаға дейін қайталанбайтын жұптарға бөлу, карусель алгоритмі және дайын фирмалық Canva PNG постері.
+                Сыныпты 25 аптаға жұптарға бөлу және дайын фирмалық PNG постері. Барлық жұптар өткен соң цикл қайталанады.
               </p>
             </div>
 

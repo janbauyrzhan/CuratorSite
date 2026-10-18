@@ -353,14 +353,14 @@ export default function App() {
   useEffect(() => {
     if (orderedStudentsPairs.length < 2) {
       if (orderedStudentsPairs.length === 1) {
-        setSchedule([[[orderedStudentsPairs[0]]]]);
+        setSchedule(Array.from({ length: MAX_WEEKS }, () => [[orderedStudentsPairs[0]]]));
       } else {
         setSchedule([]);
       }
       return;
     }
-    const raw = divType === 'gendered' ? makeGenderedSchedule(orderedStudentsPairs) : makeSchedule(orderedStudentsPairs);
-    const capped = raw.slice(0, MAX_WEEKS);
+    const raw = divType === 'gendered' ? makeGenderedSchedule(orderedStudentsPairs, MAX_WEEKS) : makeSchedule(orderedStudentsPairs);
+    const capped = Array.from({ length: MAX_WEEKS }, (_, week) => raw[week % raw.length]);
     setSchedule(capped);
     setWeekIdx(prev => Math.min(prev, Math.max(0, capped.length - 1)));
   }, [orderedStudentsPairs, divType]);
@@ -1103,7 +1103,7 @@ export default function App() {
                       fontSize: '11px', fontWeight: 800, color: BRAND,
                       background: '#eff0ff', padding: '4px 10px', borderRadius: '6px'
                     }}>
-                      16 АПТАЛЫҚ КАРУСЕЛЬ
+                      25 АПТАЛЫҚ КАРУСЕЛЬ
                     </span>
                   </div>
 
@@ -1112,7 +1112,7 @@ export default function App() {
                       ЖҰПТЫҚ ЖҰМЫС
                     </h2>
                     <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
-                      Сыныпты 25 аптаға дейін қайталанбайтын жұптарға бөлу, карусель алгоритмі және дайын Canva SVG/PNG постері.
+                      Сыныпты 25 аптаға жұптарға бөлу және дайын PNG постері. Барлық жұптар өткен соң цикл қайталанады.
                     </p>
                   </div>
 
@@ -1530,8 +1530,8 @@ export default function App() {
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.4 }}>
                   {divType === 'gendered'
-                    ? '✓ Ұлдар тек ұлдармен, қыздар тек қыздармен жұптасады. Тақ қалған ұл мен қыз өзара бірігеді.'
-                    : '✓ 25 аптаға дейінгі карусель: оқушылар қайталанбайтын жұптарға бөлінеді.'}
+                    ? '✓ 25 апта: ұлдар ұлдармен, қыздар қыздармен жұптасады. Тақ қалған ұл мен қыз бірігеді. Әр топтың жұптары біткен соң циклі қайталанады.'
+                    : '✓ 25 апталық карусель: барлық жұптар өткен соң цикл қайталанады.'}
                 </div>
               </div>
             </section>
