@@ -27,7 +27,7 @@ import {
 
 /* ── Constants ──────────────────────────────────────────────── */
 const BRAND     = '#364097';
-const MAX_WEEKS = 16; // 1 to 16 weeks compact switcher
+const MAX_WEEKS = 25; // 1 to 25 weeks compact switcher
 
 /* ── Realistic 28-Student Demo Dataset ──────────────────────── */
 const DEMO_STUDENTS_TEXT = `Болатұлы Нұрдәулет 87754615707
@@ -144,6 +144,7 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [authLoaded, setAuthLoaded] = useState(false);
   const [workspaceLoaded, setWorkspaceLoaded] = useState(false);
+  const [cloudHydrated, setCloudHydrated] = useState(false);
   const [workspaceError, setWorkspaceError] = useState('');
   const [recoveryMode, setRecoveryMode] = useState(false);
   const [legacyWorkspaces, setLegacyWorkspaces] = useState([]);
@@ -217,8 +218,43 @@ export default function App() {
 
   const hydrateWorkspace = useCallback(async (authUser) => {
     const requestId = ++hydrationId.current;
-    setWorkspaceLoaded(false);
+    const cacheKey = `infologia-workspace-cache:${authUser.id}`;
+    let cachedWorkspace = null;
+    try {
+      const cached = JSON.parse(window.localStorage.getItem(cacheKey) || 'null');
+      if (cached && typeof cached === 'object' && Array.isArray(cached.groups)) cachedWorkspace = cached;
+    } catch {
+      // Ignore unavailable or malformed local cache and load from Supabase.
+    }
+
+    const applyWorkspace = (workspace) => {
+      const savedGroups = Array.isArray(workspace?.groups) ? workspace.groups : [];
+      setGroups(savedGroups);
+      const selectedGid = workspace?.activeGid || savedGroups[0]?.id || null;
+      setActiveGid(selectedGid);
+      setWeekIdx(workspace?.weekIdx || 0);
+      setDivType(workspace?.divType || 'mixed');
+
+      const selectedGroup = savedGroups.find(g => g.id === selectedGid);
+      setRawTextPairs(selectedGroup?.rawTextPairs || '');
+      setStudentsPairs(selectedGroup?.students_pairs || []);
+      setCustomPairsOrder(selectedGroup?.customPairsOrder || null);
+      setRawTextExam(selectedGroup?.rawTextExam || '');
+      setStudentsExam(selectedGroup?.students_exam || []);
+      setPairOverrides(selectedGroup?.pairOverrides || {});
+    };
+
+    setCloudHydrated(false);
     setWorkspaceError('');
+    if (cachedWorkspace) {
+      // Show the last known workspace immediately; refresh it from Supabase below.
+      applyWorkspace(cachedWorkspace);
+      setUser({ id: authUser.id, email: authUser.email, username: authUser.email?.split('@')[0] || 'Куратор' });
+      setWorkspaceLoaded(true);
+      setAuthLoaded(true);
+    } else {
+      setWorkspaceLoaded(false);
+    }
     const { data, error } = await supabase
       .from('user_workspaces')
       .select('data')
@@ -226,33 +262,24 @@ export default function App() {
       .maybeSingle();
     if (requestId !== hydrationId.current) return;
     if (error) {
-      setWorkspaceError(error.message || 'Cloud деректерін жүктеу мүмкін болмады.');
-      setWorkspaceLoaded(false);
+      if (!cachedWorkspace) {
+        setWorkspaceError(error.message || 'Cloud деректерін жүктеу мүмкін болмады.');
+        setWorkspaceLoaded(false);
+      }
       return;
     }
 
-    const workspace = data?.data || null;
+    const workspace = data?.data || cachedWorkspace || null;
     const savedGroups = Array.isArray(workspace?.groups) ? workspace.groups : [];
     setUser({ id: authUser.id, email: authUser.email, username: authUser.email?.split('@')[0] || 'Куратор' });
-    setGroups(savedGroups);
-    const selectedGid = workspace?.activeGid || savedGroups[0]?.id || null;
-    setActiveGid(selectedGid);
-    setWeekIdx(workspace?.weekIdx || 0);
-    setDivType(workspace?.divType || 'mixed');
-
-    const selectedGroup = savedGroups.find(g => g.id === selectedGid);
-    setRawTextPairs(selectedGroup?.rawTextPairs || '');
-    setStudentsPairs(selectedGroup?.students_pairs || []);
-    setCustomPairsOrder(selectedGroup?.customPairsOrder || null);
-    setRawTextExam(selectedGroup?.rawTextExam || '');
-    setStudentsExam(selectedGroup?.students_exam || []);
-    setPairOverrides(selectedGroup?.pairOverrides || {});
+    applyWorkspace(workspace);
 
     const localCopies = getLegacyWorkspaces();
     setLegacyWorkspaces(savedGroups.length === 0 ? localCopies : []);
     setLegacyImportId(savedGroups.length === 0 ? (localCopies[0]?.username || '') : '');
     clearLegacyCredentials();
     setWorkspaceLoaded(true);
+    setCloudHydrated(true);
     setSyncState(data ? 'saved' : 'saving');
   }, [supabase]);
 
@@ -270,12 +297,12 @@ export default function App() {
             void hydrateWorkspace(session.user).then(() => setAuthLoaded(true));
           } else {
             hydrationId.current++;
-            setUser(null); setWorkspaceLoaded(false); setWorkspaceError('');
+            setUser(null); setWorkspaceLoaded(false); setCloudHydrated(false); setWorkspaceError('');
             resetWorkspace(); setAuthLoaded(true);
           }
         } else if (event === 'SIGNED_OUT') {
           hydrationId.current++;
-          setUser(null); setWorkspaceLoaded(false); setWorkspaceError('');
+          setUser(null); setWorkspaceLoaded(false); setCloudHydrated(false); setWorkspaceError('');
           setRecoveryMode(false); setLegacyWorkspaces([]); resetWorkspace(); setAuthLoaded(true);
         }
       }, 0);
@@ -285,7 +312,7 @@ export default function App() {
 
   /* ── Persist cloud workspace after edits ────────────────── */
   useEffect(() => {
-    if (!supabase || !user?.id || !workspaceLoaded || workspaceError) return;
+    if (!supabase || !user?.id || !workspaceLoaded || !cloudHydrated || workspaceError) return;
     const data = { groups, activeGid, weekIdx, divType };
     const timer = setTimeout(async () => {
       setSyncState('saving');
@@ -302,7 +329,17 @@ export default function App() {
       }
     }, 700);
     return () => clearTimeout(timer);
-  }, [supabase, user, groups, activeGid, weekIdx, divType, workspaceLoaded, workspaceError, notify]);
+  }, [supabase, user, groups, activeGid, weekIdx, divType, workspaceLoaded, cloudHydrated, workspaceError, notify]);
+
+  // Keep a user-scoped copy for instant rendering on the next visit or tab restore.
+  useEffect(() => {
+    if (!user?.id || !workspaceLoaded) return;
+    try {
+      window.localStorage.setItem(`infologia-workspace-cache:${user.id}`, JSON.stringify({ groups, activeGid, weekIdx, divType }));
+    } catch {
+      // Local storage can be disabled or full; the Supabase copy remains authoritative.
+    }
+  }, [user, groups, activeGid, weekIdx, divType, workspaceLoaded]);
 
   /* ── Rebuild Schedule when Pairs Students or Division Mode Changes */
   const orderedStudentsPairs = useMemo(() => {
@@ -1075,13 +1112,13 @@ export default function App() {
                       ЖҰПТЫҚ ЖҰМЫС
                     </h2>
                     <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
-                      Сыныпты 16 аптаға қайталанбайтын жұптарға бөлу, карусель алгоритмі және дайын Canva SVG/PNG постері.
+                      Сыныпты 25 аптаға дейін қайталанбайтын жұптарға бөлу, карусель алгоритмі және дайын Canva SVG/PNG постері.
                     </p>
                   </div>
 
                   <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                      <Check size={16} color={BRAND} /> 16 апталық автоматты карусель алгоритмі
+                      <Check size={16} color={BRAND} /> 25 аптаға дейінгі автоматты карусель алгоритмі
                     </div>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
                       <Check size={16} color={BRAND} /> Ұл-қыз және аралас бөлу режимдері
@@ -1494,7 +1531,7 @@ export default function App() {
                 <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.4 }}>
                   {divType === 'gendered'
                     ? '✓ Ұлдар тек ұлдармен, қыздар тек қыздармен жұптасады. Тақ қалған ұл мен қыз өзара бірігеді.'
-                    : '✓ 16 апталық карусель: барлық оқушылар қайталанбайтын жұптарға бөлінеді.'}
+                    : '✓ 25 аптаға дейінгі карусель: оқушылар қайталанбайтын жұптарға бөлінеді.'}
                 </div>
               </div>
             </section>
