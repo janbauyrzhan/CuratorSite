@@ -1,10 +1,10 @@
 import './globals.css';
-import { Open_Sans } from 'next/font/google';
+import { Montserrat } from 'next/font/google';
 
-const openSans = Open_Sans({
+const montserrat = Montserrat({
   subsets: ['latin', 'cyrillic'],
-  weight: ['400', '600', '700', '800'],
-  variable: '--font-open-sans',
+  weight: ['400', '500', '600', '700', '800'],
+  variable: '--font-montserrat',
   display: 'swap',
 });
 
@@ -15,8 +15,8 @@ export const metadata = {
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="kk" className={openSans.variable}>
-      <body className={openSans.className}>{children}</body>
+    <html lang="kk" className={montserrat.variable}>
+      <body className={montserrat.className}>{children}</body>
     </html>
   );
 }

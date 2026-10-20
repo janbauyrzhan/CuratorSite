@@ -12,6 +12,7 @@ import {
   Plus, Trash2, Download, Copy, LogOut, GraduationCap, Users, Clock, Check, User, ArrowLeftRight, Shuffle, Eye, EyeOff, MessageCircle
 } from 'lucide-react';
 import AuthPanel     from './AuthPanel';
+import WorkspaceHome from './WorkspaceHome';
 import Poster        from './Poster';
 import ExamScheduler from './ExamScheduler';
 import {
@@ -26,7 +27,7 @@ import {
 } from '@/lib/svgTemplate';
 
 /* ── Constants ──────────────────────────────────────────────── */
-const BRAND     = '#364097';
+const BRAND     = '#514fb1';
 const MAX_WEEKS = 25; // 1 to 25 weeks compact switcher
 
 /* ── Realistic 28-Student Demo Dataset ──────────────────────── */
@@ -73,6 +74,8 @@ function Btn({ children, onClick, variant = 'primary', size = 'md', disabled = f
   return (
     <button
       onClick={disabled ? undefined : onClick}
+      className={`ui-button ui-button-${variant}`}
+      disabled={disabled}
       {...buttonProps}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: '6px',
@@ -92,7 +95,7 @@ function Btn({ children, onClick, variant = 'primary', size = 'md', disabled = f
 
 function FieldLabel({ children }) {
   return (
-    <div style={{ fontSize: '10px', fontWeight: 700, color: '#6b7280', letterSpacing: '.07em', marginBottom: '5px' }}>
+    <div className="field-label" style={{ fontSize: '10px', fontWeight: 700, color: '#6b7280', letterSpacing: '.07em', marginBottom: '5px' }}>
       {children}
     </div>
   );
@@ -946,10 +949,10 @@ export default function App() {
           <div
             onClick={() => setActiveTab('hub')}
             style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
-            className="app-brand"
+            className="app-brand" role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveTab('hub'); } }}
             title="Басты мәзірге өту"
           >
-            <img src="/infologia-logo.png" alt="infoLogia — Кураторлардың жұмыс кабинеті" className="app-brand-logo" />
+            <img src="/infologia-wordmark.png" alt="infoLogia — Кураторлардың жұмыс кабинеті" className="app-brand-logo" />
           </div>
           <div style={{ width: '1px', height: '18px', background: '#e5e7eb' }} />
 
@@ -972,9 +975,10 @@ export default function App() {
                 ← Басты мәзірге
               </button>
 
-              <div style={{ display: 'flex', background: '#eff0ff', borderRadius: '10px', padding: '3px', gap: '3px' }}>
+              <div className="app-tabs" style={{ display: 'flex', background: '#eff0ff', borderRadius: '10px', padding: '3px', gap: '3px' }}>
                 <button
                   onClick={() => setActiveTab('pairs')}
+                  aria-current={activeTab === 'pairs' ? 'page' : undefined}
                   style={{
                     padding: '6px 16px', borderRadius: '7px', border: 'none', cursor: 'pointer',
                     fontSize: '13px', fontWeight: 700, transition: 'all .15s',
@@ -988,6 +992,7 @@ export default function App() {
                 </button>
                 <button
                   onClick={() => setActiveTab('exam')}
+                  aria-current={activeTab === 'exam' ? 'page' : undefined}
                   style={{
                     padding: '6px 16px', borderRadius: '7px', border: 'none', cursor: 'pointer',
                     fontSize: '13px', fontWeight: 700, transition: 'all .15s',
@@ -1003,7 +1008,7 @@ export default function App() {
             </div>
           ) : (
             <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
-              Басты мәзір • Модуль таңдау
+              Куратор кабинеті
             </span>
           )}
         </div>
@@ -1022,7 +1027,7 @@ export default function App() {
               </span>
             </div>
           )}
-          <span title={syncState === 'error' ? 'Соңғы деректер cloud-қа сақталмады' : syncState === 'saving' ? 'Cloud-қа сақталып жатыр' : 'Cloud-та сақталды'} style={{ fontSize: '11px', fontWeight: 700, color: syncState === 'error' ? '#b91c1c' : syncState === 'saving' ? '#a16207' : '#15803d' }}>
+          <span className="sync-status" title={syncState === 'error' ? 'Соңғы деректер cloud-қа сақталмады' : syncState === 'saving' ? 'Cloud-қа сақталып жатыр' : 'Cloud-та сақталды'} style={{ fontSize: '11px', fontWeight: 700, color: syncState === 'error' ? '#b91c1c' : syncState === 'saving' ? '#a16207' : '#15803d' }}>
             {syncState === 'saving' ? 'Сақталуда…' : syncState === 'error' ? 'Сақтау қатесі' : 'Cloud-та сақталды ✓'}
           </span>
           <Btn variant="ghost" size="sm" onClick={logout}>
@@ -1046,213 +1051,7 @@ export default function App() {
 
       {/* ══ WORKSPACE CONTENT: HUB vs TAB 1 vs TAB 2 ════════════ */}
       {activeTab === 'hub' ? (
-        /* ════ HUB / DASHBOARD SCREEN ═══════════════════════════ */
-        <div style={{ flex: 1, overflowY: 'auto', background: 'linear-gradient(135deg, #f4f6ff 0%, #e9edff 56%, #f7f8ff 100%)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '32px 20px' }}>
-          <div style={{ width: '100%', maxWidth: '980px', display: 'flex', flexDirection: 'column', gap: '32px' }}>
-
-            {/* Header Hero */}
-            <div style={{ textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '12px' }}>
-              <h1 style={{ fontSize: '28px', fontWeight: 900, color: '#0f172a', margin: 0, letterSpacing: '-0.5px' }}>
-                Жұмыс жасау үшін қажетті модульді таңдаңыз
-              </h1>
-              <p style={{ fontSize: '15px', color: '#64748b', margin: 0, maxWidth: '640px' }}>
-                Қош келдіңіз, <strong style={{ color: '#1e293b' }}>{user?.username}</strong>! Барлық топтар мен деректер логиніңізге сәйкес сақталады.
-              </p>
-            </div>
-
-            {/* Two Large Interactive Cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(340px, 1fr))', gap: '24px' }}>
-              
-              {/* Card 1: ЖҰПТЫҚ ЖҰМЫС (Blue #364097) */}
-              <div
-                onClick={() => setActiveTab('pairs')}
-                style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #dce2fa',
-                  borderRadius: '20px',
-                  padding: '32px 28px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '24px',
-                  cursor: 'pointer',
-                  transition: 'all .2s ease',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = BRAND;
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 14px 34px rgba(54, 64, 151, 0.12)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                  e.currentTarget.style.transform = 'none';
-                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.04)';
-                }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{
-                      width: '48px', height: '48px', borderRadius: '14px',
-                      background: '#eff0ff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: BRAND
-                    }}>
-                      <Users size={26} />
-                    </div>
-                    <span style={{
-                      fontSize: '11px', fontWeight: 800, color: BRAND,
-                      background: '#eff0ff', padding: '4px 10px', borderRadius: '6px'
-                    }}>
-                      25 АПТАЛЫҚ КАРУСЕЛЬ
-                    </span>
-                  </div>
-
-                  <div>
-                    <h2 style={{ fontSize: '21px', fontWeight: 900, color: '#0f172a', margin: '0 0 8px 0' }}>
-                      ЖҰПТЫҚ ЖҰМЫС
-                    </h2>
-                    <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
-                      Сыныпты 25 аптаға жұптарға бөлу және дайын PNG постері. Барлық жұптар өткен соң цикл қайталанады.
-                    </p>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                      <Check size={16} color={BRAND} /> 25 аптаға дейінгі автоматты карусель алгоритмі
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                      <Check size={16} color={BRAND} /> Ұл-қыз және аралас бөлу режимдері
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                      <Check size={16} color={BRAND} /> Тақ (29-шы) оқушыны автоматты теңестіру
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                      <Check size={16} color={BRAND} /> PNG постер және WhatsApp мәтінін көшіру
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  style={{
-                    width: '100%',
-                    padding: '13px 20px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: BRAND,
-                    color: '#ffffff',
-                    fontSize: '14px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 14px rgba(54, 64, 151, 0.25)',
-                    transition: 'all .15s',
-                  }}
-                >
-                  Генераторға кіру →
-                </button>
-              </div>
-
-              {/* Card 2: САБАҚ ТАПСЫРУ */}
-              <div
-                onClick={() => setActiveTab('exam')}
-                style={{
-                  background: '#ffffff',
-                  border: '1.5px solid #dce2fa',
-                  borderRadius: '20px',
-                  padding: '32px 28px',
-                  display: 'flex',
-                  flexDirection: 'column',
-                  justifyContent: 'space-between',
-                  gap: '24px',
-                  cursor: 'pointer',
-                  transition: 'all .2s ease',
-                  boxShadow: '0 4px 20px rgba(0, 0, 0, 0.04)',
-                }}
-                onMouseEnter={e => {
-                  e.currentTarget.style.borderColor = BRAND;
-                  e.currentTarget.style.transform = 'translateY(-4px)';
-                  e.currentTarget.style.boxShadow = '0 14px 34px rgba(54, 64, 151, 0.12)';
-                }}
-                onMouseLeave={e => {
-                  e.currentTarget.style.borderColor = '#e2e8f0';
-                  e.currentTarget.style.transform = 'none';
-                  e.currentTarget.style.boxShadow = '0 4px 20px rgba(0, 0, 0, 0.04)';
-                }}
-              >
-                <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <div style={{
-                      width: '48px', height: '48px', borderRadius: '14px',
-                      background: '#eff0ff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: BRAND
-                    }}>
-                      <Clock size={26} />
-                    </div>
-                    <span style={{
-                      fontSize: '11px', fontWeight: 800, color: BRAND,
-                      background: '#eff0ff', padding: '4px 10px', borderRadius: '6px'
-                    }}>
-                      16 СЛОТТЫҚ КЕСТЕ
-                    </span>
-                  </div>
-
-                  <div>
-                    <h2 style={{ fontSize: '21px', fontWeight: 900, color: '#0f172a', margin: '0 0 8px 0' }}>
-                      САБАҚ ТАПСЫРУ
-                    </h2>
-                    <p style={{ fontSize: '13.5px', color: '#64748b', lineHeight: 1.5, margin: 0 }}>
-                      16 слотты сабақ және емтихан тапсыру кестесі, қос даталар мен уақыт аралықтарын автоматты реттеу және template2.svg постері.
-                    </p>
-                  </div>
-
-                  <div style={{ display: 'flex', flexDirection: 'column', gap: '9px', borderTop: '1px solid #f1f5f9', paddingTop: '16px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                      <Check size={16} color={BRAND} /> 16 слоттық құрылым (әрқайсысында 2 оқушы)
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                      <Check size={16} color={BRAND} /> Бір күнде қатарынан немесе екі күнге бөлу
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                      <Check size={16} color={BRAND} /> 10, 15, 20 минуттық автоматты уақыт есебі
-                    </div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '13px', color: '#334155' }}>
-                      <Check size={16} color={BRAND} /> PNG сурет және WhatsApp кестесін көшіру
-                    </div>
-                  </div>
-                </div>
-
-                <button
-                  type="button"
-                  style={{
-                    width: '100%',
-                    padding: '13px 20px',
-                    borderRadius: '10px',
-                    border: 'none',
-                    background: BRAND,
-                    color: '#ffffff',
-                    fontSize: '14px',
-                    fontWeight: 800,
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    gap: '6px',
-                    boxShadow: '0 4px 14px rgba(54, 64, 151, 0.2)',
-                    transition: 'all .15s',
-                  }}
-                >
-                  Кесте құруға өту →
-                </button>
-              </div>
-
-            </div>
-
-          </div>
-        </div>
+        <WorkspaceHome username={user?.username} onSelect={setActiveTab} />
       ) : activeTab === 'pairs' ? (
         /* ════ TAB 1: «ЖҰПТЫҚ ЖҰМЫС» PAIRS GENERATOR ═══════════ */
         <div className="pair-workspace" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -1268,6 +1067,7 @@ export default function App() {
             {/* 1 · Save Button (Prominent with visual confirmation) */}
             <section>
               <button
+                className="workspace-save"
                 type="button"
                 onClick={handleSaveCurrentGroup}
                 style={{
@@ -1293,7 +1093,7 @@ export default function App() {
                     <Check size={16} /> Сақталды ✓
                   </>
                 ) : (
-                  '💾 Өзгерістерді сақтау'
+                  'Өзгерістерді сақтау'
                 )}
               </button>
             </section>
@@ -1367,7 +1167,7 @@ export default function App() {
                   }}
                 >
                   <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-                    <span>👥 Оқушылар тізімін көру / өзгерту ({studentsPairs.length})</span>
+                    <span>Оқушылар тізімін көру / өзгерту ({studentsPairs.length})</span>
                     {studentsPairs.length > 0 && (
                       <span style={{
                         fontSize: '10px',
@@ -1512,7 +1312,7 @@ export default function App() {
                       boxShadow: divType === 'mixed' ? '0 1px 4px rgba(0,0,0,.08)' : 'none',
                     }}
                   >
-                    🔀 Бәрі аралас
+                    Бәрі аралас
                   </button>
                   <button
                     type="button"
@@ -1525,7 +1325,7 @@ export default function App() {
                       boxShadow: divType === 'gendered' ? '0 1px 4px rgba(0,0,0,.08)' : 'none',
                     }}
                   >
-                    👫 Тек бір жынысты жұптар
+                    Тек бір жынысты жұптар
                   </button>
                 </div>
                 <div style={{ fontSize: '11px', color: '#64748b', lineHeight: 1.4 }}>
@@ -1673,6 +1473,8 @@ export default function App() {
             padding: '24px', display: 'flex', flexDirection: 'column',
             gap: '14px', alignItems: 'center',
           }}>
+
+            <div className="workspace-heading"><span className="eyebrow">Куратор құралдары</span><h1>Жұптық жұмыс</h1><p>Жұптарды реттеп, дайын постермен бөлісіңіз.</p></div>
 
             {/* Onboarding block for colleagues when list or group is empty */}
             {(!activeGid || !rawTextPairs.trim() || studentsPairs.length === 0) && (

@@ -2,8 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { ArrowRight, Eye, EyeOff, Lock, Mail } from 'lucide-react';
-
-const BRAND = '#364097';
+import styles from './AuthPanel.module.css';
 
 export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRecoveryDone }) {
   const [mode, setMode] = useState('login');
@@ -74,81 +73,89 @@ export default function AuthPanel({ supabase, onAuth, recoveryMode = false, onRe
     }
   }
 
-  const inputStyle = {
-    width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '10px',
-    padding: '11px 14px 11px 40px', fontSize: '14px', color: '#111827',
-    outline: 'none', background: '#fff',
-  };
-  const tabStyle = active => ({
-    flex: 1, padding: '10px', borderRadius: '10px', border: 'none', cursor: 'pointer',
-    fontSize: '13px', fontWeight: 800, background: active ? '#fff' : 'transparent',
-    color: active ? BRAND : '#64748b', boxShadow: active ? '0 2px 8px rgba(0,0,0,.08)' : 'none',
-  });
-  const title = mode === 'recovery' ? 'Жаңа құпия сөз' : 'Кураторлардың жұмыс кабинеті';
+  const title = mode === 'recovery' ? 'Жаңа құпия сөз' : mode === 'register' ? 'Жаңа аккаунт құру' : 'Жұмыс кабинетіне кіру';
 
   return (
-    <div style={{ position: 'fixed', inset: 0, zIndex: 100, background: 'linear-gradient(135deg, #f4f6ff 0%, #e9edff 100%)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div style={{ background: '#fff', borderRadius: '24px', padding: '40px 38px', width: '420px', maxWidth: '100%', boxShadow: '0 20px 60px rgba(54,64,151,.12), 0 0 0 1px rgba(54,64,151,.06)' }}>
-        <div style={{ textAlign: 'center', marginBottom: '26px' }}>
-          <img src="/infologia-logo.png" alt="infoLogia" style={{ display: 'block', width: '210px', height: '74px', maxWidth: '100%', objectFit: 'cover', objectPosition: 'center', borderRadius: '10px', margin: '0 auto 14px' }} />
-          <div style={{ fontSize: '13px', color: '#64748b', marginTop: '4px', fontWeight: 600 }}>{title}</div>
+    <div className={styles.page}>
+      <header className={styles.header}>
+        <div className={styles.headerInner}>
+          <img src="/infologia-wordmark.png" alt="infoLogia" className={styles.logo} />
+          <span className={styles.headerLabel}>Кураторлар кабинеті</span>
         </div>
+      </header>
 
-        {!supabase ? (
-          <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '12px', padding: '14px', color: '#854d0e', fontSize: '13px', lineHeight: 1.6 }}>
-            Cloud авторизация қосылмаған. Сайт иесі Supabase жобасын жасап, <code>NEXT_PUBLIC_SUPABASE_URL</code> және <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> параметрлерін баптауы керек.
-          </div>
-        ) : (
-          <>
+      <main className={styles.main}>
+        <section className={styles.intro} aria-labelledby="auth-intro-title">
+          <p className={styles.eyebrow}>infoLogia командасы үшін</p>
+          <h1 id="auth-intro-title" className={styles.introTitle}>Күнделікті жұмыс.<br /><span>Бәрі бір жерде.</span></h1>
+          <p className={styles.introText}>Топтарды басқарыңыз, жұптық жұмыс пен сабақ тапсыру кестесін дайындаңыз.</p>
+          <figure className={styles.photoFrame}>
+            <img src="/infologia-team.jpg" alt="infoLogia командасы" className={styles.photo} />
+            <figcaption className={styles.photoCaption}>Бір команда. Ортақ мақсат.</figcaption>
+          </figure>
+        </section>
+
+        <section className={styles.formPanel} aria-labelledby="auth-form-title">
+          <p className={styles.eyebrow}>Жеке кабинет</p>
+          <h2 id="auth-form-title" className={styles.formTitle}>{title}</h2>
+          <p className={styles.formDescription}>{mode === 'recovery' ? 'Аккаунтыңыз үшін жаңа құпия сөз енгізіңіз.' : mode === 'register' ? 'Жұмысты бастау үшін деректеріңізді енгізіңіз.' : 'Жұмысты жалғастыру үшін аккаунтыңызға кіріңіз.'}</p>
+
+          {!supabase ? (
+            <div className={styles.notice}>
+              Cloud авторизация қосылмаған. Сайт иесі Supabase жобасын жасап, <code>NEXT_PUBLIC_SUPABASE_URL</code> және <code>NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY</code> параметрлерін баптауы керек.
+            </div>
+          ) : (
+            <>
               {mode !== 'recovery' && (
-              <div style={{ display: 'flex', background: '#eff0ff', borderRadius: '12px', padding: '4px', marginBottom: '22px' }}>
-                <button type="button" onClick={() => { setMode('login'); setError(''); setInfo(''); }} style={tabStyle(mode === 'login')}>Кіру</button>
-                <button type="button" onClick={() => { setMode('register'); setError(''); setInfo(''); }} style={tabStyle(mode === 'register')}>Тіркелу</button>
-              </div>
-            )}
-
-            <form onSubmit={submit} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-              {mode !== 'recovery' && <div>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', letterSpacing: '.06em', marginBottom: '6px' }}>ЭЛЕКТРОНДЫҚ ПОШТА (EMAIL)</div>
-                <div style={{ position: 'relative' }}>
-                  <input type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com" style={inputStyle} />
-                  <Mail size={16} color="#94a3b8" style={{ position: 'absolute', left: '13px', top: '13px', pointerEvents: 'none' }} />
+                <div className={styles.tabs} aria-label="Аккаунтқа кіру немесе тіркелу">
+                  <button type="button" onClick={() => { setMode('login'); setError(''); setInfo(''); }} aria-pressed={mode === 'login'} className={`${styles.tab} ${mode === 'login' ? styles.activeTab : ''}`}>Кіру</button>
+                  <button type="button" onClick={() => { setMode('register'); setError(''); setInfo(''); }} aria-pressed={mode === 'register'} className={`${styles.tab} ${mode === 'register' ? styles.activeTab : ''}`}>Тіркелу</button>
                 </div>
-              </div>}
+              )}
 
-              {<div>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', letterSpacing: '.06em', marginBottom: '6px' }}>{mode === 'recovery' ? 'ЖАҢА ҚҰПИЯ СӨЗ' : 'ҚҰПИЯ СӨЗ'}</div>
-                <div style={{ position: 'relative' }}>
-                  <input type={showPassword ? 'text' : 'password'} required minLength={mode === 'login' ? undefined : 8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Кемінде 8 символ" style={{ ...inputStyle, paddingRight: '42px' }} />
-                  <Lock size={16} color="#94a3b8" style={{ position: 'absolute', left: '13px', top: '13px', pointerEvents: 'none' }} />
-                  <button type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? 'Құпия сөзді жасыру' : 'Құпия сөзді көрсету'} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', border: 'none', borderRadius: '6px', background: 'transparent', color: '#64748b', cursor: 'pointer' }}>
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
+              <form onSubmit={submit} className={styles.form}>
+                {mode !== 'recovery' && <div>
+                  <label htmlFor="auth-email" className={styles.label}>Электрондық пошта</label>
+                  <div className={styles.inputWrap}>
+                    <input id="auth-email" type="email" required autoComplete="email" value={email} onChange={e => setEmail(e.target.value)} placeholder="name@example.com" className={styles.input} />
+                    <Mail size={17} className={styles.inputIcon} aria-hidden="true" />
+                  </div>
+                </div>}
+
+                <div>
+                  <label htmlFor="auth-password" className={styles.label}>{mode === 'recovery' ? 'Жаңа құпия сөз' : 'Құпия сөз'}</label>
+                  <div className={styles.inputWrap}>
+                    <input id="auth-password" type={showPassword ? 'text' : 'password'} required minLength={mode === 'login' ? undefined : 8} autoComplete={mode === 'login' ? 'current-password' : 'new-password'} value={password} onChange={e => setPassword(e.target.value)} placeholder="Кемінде 8 символ" className={`${styles.input} ${styles.passwordInput}`} />
+                    <Lock size={17} className={styles.inputIcon} aria-hidden="true" />
+                    <button type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? 'Құпия сөзді жасыру' : 'Құпия сөзді көрсету'} aria-pressed={showPassword} className={styles.eyeButton}>
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
                 </div>
-              </div>}
 
-              {mode === 'recovery' && <div>
-                <div style={{ fontSize: '11px', fontWeight: 800, color: '#475569', letterSpacing: '.06em', marginBottom: '6px' }}>ҚҰПИЯ СӨЗДІ ҚАЙТАЛАҢЫЗ</div>
-                <div style={{ position: 'relative' }}>
-                  <input type={showPassword ? 'text' : 'password'} required minLength={8} autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Құпия сөзді қайталаңыз" style={{ ...inputStyle, paddingLeft: '14px', paddingRight: '42px' }} />
-                  <button type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? 'Құпия сөзді жасыру' : 'Құпия сөзді көрсету'} style={{ position: 'absolute', right: '10px', top: '50%', transform: 'translateY(-50%)', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '30px', height: '30px', border: 'none', borderRadius: '6px', background: 'transparent', color: '#64748b', cursor: 'pointer' }}>
-                    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                  </button>
-                </div>
-              </div>}
+                {mode === 'recovery' && <div>
+                  <label htmlFor="auth-confirm-password" className={styles.label}>Құпия сөзді қайталаңыз</label>
+                  <div className={styles.inputWrap}>
+                    <input id="auth-confirm-password" type={showPassword ? 'text' : 'password'} required minLength={8} autoComplete="new-password" value={confirmPassword} onChange={e => setConfirmPassword(e.target.value)} placeholder="Құпия сөзді қайталаңыз" className={`${styles.input} ${styles.confirmInput}`} />
+                    <button type="button" onClick={() => setShowPassword(visible => !visible)} aria-label={showPassword ? 'Құпия сөзді жасыру' : 'Құпия сөзді көрсету'} aria-pressed={showPassword} className={styles.eyeButton}>
+                      {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                    </button>
+                  </div>
+                </div>}
 
-              {error && <div role="alert" style={{ background: '#fef2f2', border: '1.5px solid #fecaca', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#dc2626', fontWeight: 600, lineHeight: 1.5 }}>⚠️ {error}</div>}
-              {info && <div role="status" style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px', padding: '10px 14px', fontSize: '12px', color: '#166534', fontWeight: 600, lineHeight: 1.5 }}>{info}</div>}
+                {error && <div role="alert" className={styles.error}>⚠️ {error}</div>}
+                {info && <div role="status" className={styles.info}>{info}</div>}
 
-              <button type="submit" disabled={loading} style={{ background: loading ? '#94a3b8' : BRAND, color: '#fff', border: 'none', borderRadius: '12px', padding: '13px', fontSize: '14px', fontWeight: 800, cursor: loading ? 'wait' : 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginTop: '4px', boxShadow: '0 4px 14px rgba(54,64,151,.2)' }}>
-                <span>{loading ? 'Күте тұрыңыз...' : mode === 'register' ? 'Аккаунт құру' : mode === 'recovery' ? 'Құпия сөзді сақтау' : 'Кіру'}</span>
-                <ArrowRight size={16} />
-              </button>
-            </form>
+                <button type="submit" disabled={loading} className={styles.submit}>
+                  <span>{loading ? 'Күте тұрыңыз...' : mode === 'register' ? 'Аккаунт құру' : mode === 'recovery' ? 'Құпия сөзді сақтау' : 'Кіру'}</span>
+                  <ArrowRight size={18} aria-hidden="true" />
+                </button>
+              </form>
 
-          </>
-        )}
-      </div>
+            </>
+          )}
+        </section>
+      </main>
     </div>
   );
 }

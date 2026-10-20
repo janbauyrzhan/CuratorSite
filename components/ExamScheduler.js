@@ -14,7 +14,7 @@ import {
 } from '@/lib/svgTemplate2';
 import { cleanStudentName } from '@/lib/utils';
 
-const BRAND = '#364097';
+const BRAND = '#514fb1';
 
 const DEMO_EXAM_STUDENTS = `Болатұлы Нұрдәулет
 Еркинжан Каусар
@@ -56,6 +56,8 @@ function Btn({ children, onClick, variant = 'primary', size = 'md', disabled = f
   return (
     <button
       onClick={disabled ? undefined : onClick}
+      className={`ui-button ui-button-${variant}`}
+      disabled={disabled}
       style={{
         display: 'inline-flex', alignItems: 'center', gap: '6px',
         padding: size === 'sm' ? '6px 12px' : '9px 16px',
@@ -74,7 +76,7 @@ function Btn({ children, onClick, variant = 'primary', size = 'md', disabled = f
 
 function FieldLabel({ children }) {
   return (
-    <div style={{ fontSize: '10px', fontWeight: 800, color: '#475569', letterSpacing: '.06em', marginBottom: '5px' }}>
+    <div className="field-label" style={{ fontSize: '10px', fontWeight: 800, color: '#475569', letterSpacing: '.06em', marginBottom: '5px' }}>
       {children}
     </div>
   );
@@ -406,6 +408,7 @@ export default function ExamScheduler({
           <button
             type="button"
             onClick={handleSave}
+            className="workspace-save"
             style={{
               width: '100%',
               background: savedAnim ? '#059669' : BRAND,
@@ -429,7 +432,7 @@ export default function ExamScheduler({
                 <Check size={16} /> Сақталды ✓
               </>
             ) : (
-              '💾 Өзгерістерді сақтау'
+              'Өзгерістерді сақтау'
             )}
           </button>
         </section>
@@ -647,7 +650,7 @@ export default function ExamScheduler({
                 transition: 'all .15s',
               }}
             >
-              <span>👥 Оқушылар тізімін көру / өзгерту ({students.length})</span>
+              <span>Оқушылар тізімін көру / өзгерту ({students.length})</span>
               <span style={{ color: BRAND, fontSize: '13px', fontWeight: 800 }}>
                 {showStudentList ? '▴' : '▾'}
               </span>
@@ -796,6 +799,8 @@ export default function ExamScheduler({
         padding: '24px', display: 'flex', flexDirection: 'column',
         gap: '14px', alignItems: 'center',
       }}>
+
+        <div className="workspace-heading"><span className="eyebrow">Куратор құралдары</span><h1>Сабақ тапсыру</h1><p>Күн мен уақытты белгілеп, сабақ кестесін дайындаңыз.</p></div>
 
         {/* Action Toolbar */}
         <div className="workspace-toolbar" style={{ width: '100%', maxWidth: '1060px', display: 'flex', gap: '8px', flexWrap: 'wrap', alignItems: 'center' }}>
