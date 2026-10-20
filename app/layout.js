@@ -11,6 +11,11 @@ const montserrat = Montserrat({
 export const metadata = {
   title: 'infoLogia • Куратор сайты',
   description: 'Жұптық жұмыс генераторы',
+  icons: {
+    icon: '/infologia-logo.png',
+    shortcut: '/infologia-logo.png',
+    apple: '/infologia-logo.png',
+  },
 };
 
 export default function RootLayout({ children }) {
