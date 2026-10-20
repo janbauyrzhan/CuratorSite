@@ -6,7 +6,6 @@ export default function WorkspaceHome({ username, onSelect }) {
       <div className="dashboard-container">
         <section className="home-hero" aria-labelledby="home-title">
           <div className="home-hero-copy">
-            <span className="eyebrow">infoLogia / Куратор кабинеті</span>
             <h1 id="home-title">Бір команда.<br />Ортақ <span>нәтиже.</span></h1>
             <p className="home-greeting">Қош келдіңіз, <strong>{username}</strong>!</p>
             <p className="home-description">Топтарыңыз, жұптық жұмыс және сабақ кестесі — күнделікті жұмысыңызға қажет құралдар бір жерде.</p>
