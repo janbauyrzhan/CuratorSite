@@ -56,19 +56,23 @@ button:disabled { cursor: not-allowed; }
 .home-section-heading { display: flex; align-items: flex-end; justify-content: space-between; gap: 24px; margin-bottom: 24px; }
 .home-section-heading h2 { font-size: 27px; font-weight: 600; letter-spacing: -.03em; line-height: 1.2; margin: 7px 0 0; }
 .home-section-heading > p { font-size: 12px; color: #83847d; margin: 0 0 4px; }
-.module-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 30px; }
+.module-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 30px; }
 .module-card { min-width: 0; }
 .module-visual { position: relative; overflow: hidden; display: flex; align-items: center; gap: 18px; height: 100px; padding: 20px 26px; border-radius: 12px; color: #514fb1; background: #eeedf9; }
 .module-visual > svg { flex-shrink: 0; }
 .module-visual-label { position: relative; z-index: 1; font-size: 15px; font-weight: 500; }
 .module-number { margin-left: auto; font-size: 76px; font-weight: 600; line-height: 1; letter-spacing: -.06em; opacity: .12; }
 .module-card-exam .module-visual { color: #53644b; background: #eff1e5; }
+.module-card-automation .module-visual { color: #9b5b35; background: #f7eee7; }
 .module-content { padding: 20px 2px 0; }
 .module-content h3 { margin: 8px 0 10px; font-size: 23px; font-weight: 600; letter-spacing: -.025em; }
 .module-content > p { max-width: 460px; color: #75766f; font-size: 12px; line-height: 1.8; margin: 0 0 22px; min-height: 44px; }
 .workspace-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid var(--line); padding: 22px 0; }
 .workspace-footer > img { width: 94px; height: 25px; object-fit: contain; filter: brightness(0); opacity: .75; }
 .workspace-footer > span { color: #8a8b84; font-size: 10px; }
+.workspace-social-link { display: inline-flex; align-items: center; gap: 7px; color: var(--brand); font-size: 11px; font-weight: 600; text-decoration: none; }
+.workspace-social-link:hover { color: var(--brand-dark); text-decoration: underline; text-underline-offset: 3px; }
+.workspace-social-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; border-radius: 3px; }
 
 /* Shared workspace controls. Exported SVG posters retain their own styles. */
 .pair-workspace { min-height: 0; }
@@ -106,6 +110,7 @@ button:disabled { cursor: not-allowed; }
   .home-hero { gap: 24px; }
   .home-hero-copy h1 { font-size: 36px; }
   .home-team > img { height: 280px; }
+  .module-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .home-team figcaption > span:last-child { display: none; }
   .module-number { font-size: 58px; }
   .module-visual { padding: 18px; gap: 12px; }

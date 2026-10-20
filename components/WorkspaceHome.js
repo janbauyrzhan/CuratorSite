@@ -1,4 +1,4 @@
-import { ArrowUpRight, Users, Clock } from 'lucide-react';
+import { ArrowUpRight, Users, Clock, Cpu, Instagram } from 'lucide-react';
 
 export default function WorkspaceHome({ username, onSelect }) {
   return (
@@ -42,9 +42,18 @@ export default function WorkspaceHome({ username, onSelect }) {
                 <button className="brand-button" onClick={() => onSelect('exam')}>Кестені дайындау <ArrowUpRight size={18} /></button>
               </div>
             </article>
+            <article className="module-card module-card-automation">
+              <div className="module-visual" aria-hidden="true"><Cpu size={46} strokeWidth={1.4} /><span className="module-visual-label">Идеядан — автоматты жүйеге</span><span className="module-number">03</span></div>
+              <div className="module-content">
+                <span className="eyebrow">Жаңа бағыт · Практикалық жоба</span>
+                <h3>Автоматтандыру</h3>
+                <p>Автоматтандыру жобасымен танысып, оның қалай жұмыс істейтінін YouTube-та көріңіз.</p>
+                <a className="brand-button" href="https://www.youtube.com/@infologiakz" target="_blank" rel="noreferrer">YouTube-та көру <ArrowUpRight size={18} /></a>
+              </div>
+            </article>
           </div>
         </section>
-        <footer className="workspace-footer"><img src="/infologia-wordmark.png" alt="infoLogia" /><span>Кураторлардың жұмыс кеңістігі</span></footer>
+        <footer className="workspace-footer"><img src="/infologia-wordmark.png" alt="infoLogia" /><span>Кураторлардың жұмыс кеңістігі</span><a className="workspace-social-link" href="https://www.instagram.com/infologia.kz/" target="_blank" rel="noreferrer" aria-label="infoLogia Instagram парақшасы"><Instagram size={18} strokeWidth={1.8} /><span>Instagram</span><ArrowUpRight size={14} /></a></footer>
       </div>
     </main>
   );
