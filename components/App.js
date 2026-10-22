@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  Plus, Trash2, Download, Copy, LogOut, GraduationCap, Users, Clock, Check, User, ArrowLeftRight, Shuffle, Eye, EyeOff, MessageCircle
+  Plus, Trash2, Download, Copy, LogOut, GraduationCap, Users, Clock, Check, User, ArrowLeftRight, Shuffle, MessageCircle
 } from 'lucide-react';
 import AuthPanel     from './AuthPanel';
 import WorkspaceHome from './WorkspaceHome';
@@ -182,7 +182,6 @@ export default function App() {
   const [schedule,       setSchedule]       = useState([]);
   const [pairOverrides,  setPairOverrides]  = useState({});
   const [showSwapModal,  setShowSwapModal]  = useState(false);
-  const [showPhonesOnPoster, setShowPhonesOnPoster] = useState(false);
   const [swapStudentA,   setSwapStudentA]   = useState('');
   const [swapStudentB,   setSwapStudentB]   = useState('');
 
@@ -406,9 +405,9 @@ export default function App() {
       weekText,
       subjectText,
       pairs: currentPairs,
-      showPhones: showPhonesOnPoster,
+      showPhones: true,
     });
-  }, [svgTemplate, weekText, subjectText, currentPairs, showPhonesOnPoster]);
+  }, [svgTemplate, weekText, subjectText, currentPairs]);
 
   /* ══ DEMO ONBOARDING ACTION (Pairs only, scoped to active group) ══ */
   function insertDemoData() {
@@ -1524,16 +1523,6 @@ export default function App() {
               {/* 3. Copy TSV for Excel (White) */}
               <Btn variant="ghost" onClick={copyTSV}>
                 <Copy size={14} />Тізімді көшіру (Excel)
-              </Btn>
-
-              <Btn
-                variant="ghost"
-                onClick={() => setShowPhonesOnPoster(v => !v)}
-                aria-pressed={showPhonesOnPoster}
-                title={showPhonesOnPoster ? 'Постерден телефон нөмірлерін жасыру' : 'Постерде телефон нөмірлерін көрсету'}
-              >
-                {showPhonesOnPoster ? <EyeOff size={14} /> : <Eye size={14} />}
-                {showPhonesOnPoster ? 'Телефондарды жасыру' : 'Телефондарды көрсету'}
               </Btn>
 
               {/* 4. Manual Pair Adjustment / Swap Toggle Button */}
