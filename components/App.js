@@ -1032,6 +1032,7 @@ export default function App() {
         </div>
 
         {/* User Auth Info & Logout Button */}
+        {activeTab==='plan'&&planSubject==='informatics'&&<div className="plan-header-info" title="Өзгерістер тобыңызға автоматты сақталады."><strong>Информатика</strong><span>17 дайын апта</span></div>}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }} className="app-account">
           {user && (
             <div style={{
@@ -1045,8 +1046,8 @@ export default function App() {
               </span>
             </div>
           )}
-          <span className="sync-status" title={syncState === 'error' ? 'Соңғы деректер cloud-қа сақталмады' : syncState === 'saving' ? 'Cloud-қа сақталып жатыр' : 'Cloud-та сақталды'} style={{ fontSize: '11px', fontWeight: 700, color: syncState === 'error' ? '#b91c1c' : syncState === 'saving' ? '#a16207' : '#15803d' }}>
-            {syncState === 'saving' ? 'Сақталуда…' : syncState === 'error' ? 'Сақтау қатесі' : 'Cloud-та сақталды ✓'}
+          <span role="status" className="sync-status" title={syncState === 'error' ? 'Соңғы деректер cloud-қа сақталмады' : syncState === 'saving' ? 'Cloud-қа сақталып жатыр' : 'Cloud-та сақталды'} style={{ fontSize: '11px', fontWeight: 700, color: syncState === 'error' ? '#b91c1c' : syncState === 'saving' ? '#a16207' : '#15803d' }}>
+            {syncState === 'saving' ? 'Сақталуда…' : syncState === 'error' ? 'Сақтау қатесі' : activeTab==='plan' ? 'Автоматты сақталды ✓' : 'Cloud-та сақталды ✓'}
           </span>
           <Btn variant="ghost" size="sm" onClick={logout}>
             <LogOut size={13} />Шығу

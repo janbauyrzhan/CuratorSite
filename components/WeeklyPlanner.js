@@ -72,10 +72,8 @@ export default function WeeklyPlanner({userId, syncState, groups, activeGid, sel
         <details><summary>Апта мәтінін өзгерту</summary><p>Дайын тақырыптарды қажет болса түзетіңіз.</p>{plan.days.map((text,index)=><label key={index}>{index===5?'Сенбі / Жексенбі':DAYS[index]}<textarea rows={3} maxLength={350} value={text} onChange={e=>update({days:plan.days.map((v,i)=>i===index?e.target.value:v)})}/></label>)}</details>
       </aside>
       <section className="planner-preview" aria-label="Жоспардың алдын ала көрінісі">
-        <div className="workspace-heading"><span className="eyebrow">Куратор құралдары</span><h1>Апталық жоспар</h1><p>Информатика · 17 дайын апта. Өзгерістер тобыңызға автоматты сақталады.</p></div>
-        <p role="status">{syncState==='saved'?'Автоматты сақталды ✓':syncState==='error'?'Құрылғыда сақталды. Cloud синхрондауы сәтсіз.':'Сақталуда…'}</p>
+        <div className="workspace-heading"><span className="eyebrow">Куратор құралдары</span><h1>Апталық жоспар</h1></div>
         <div className="planner-actions"><button className="brand-button brand-button-dark" disabled={!svg || !isPlanDate(plan.start) || !isPlanDate(plan.end) || plan.end<plan.start || overflow || downloading} onClick={download}><Download size={18}/>{downloading?'Дайындалуда…':'Суретті жүктеу (PNG)'}</button></div>
-        {(!isPlanDate(plan.start)||!isPlanDate(plan.end)) && <p>Жүктеу үшін апта күндерін белгілеңіз.</p>}
         {overflow && <p role="alert">Мәтін ұяшыққа сыймайды. Мәтінді қысқартыңыз немесе қосымша сабақты басқа күнге ауыстырыңыз.</p>}
         {error?<p role="alert">{error}</p>:svg?<div className="planner-poster" dangerouslySetInnerHTML={{__html:svg}}/>:<p role="status">Үлгі жүктелуде…</p>}
       </section>
