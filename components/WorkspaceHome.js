@@ -48,7 +48,7 @@ export default function WorkspaceHome({ username, onSelect }) {
             </article>
             <article className="module-card module-card-plan">
               <div className="module-visual" aria-hidden="true"><CalendarDays size={46} strokeWidth={1.4}/><span className="module-visual-label">Аптаңызды жоспарлаңыз</span><span className="module-number">04</span></div>
-              <div className="module-content"><h3>Апталық жоспар</h3><p>Информатикадан 17 дайын апта. Күндерді өзгертіп, практикалық және кураторлық сабақтарды қосыңыз.</p><button className="brand-button" onClick={()=>onSelect('plan')}>Жоспарды дайындау <ArrowUpRight size={18}/></button></div>
+              <div className="module-content"><h3>Апталық жоспар</h3><p>Пәнді таңдап, апталық жоспар дайындаңыз. Күндерді өзгертіп, практикалық және кураторлық сабақтарды қосыңыз.</p><button className="brand-button" onClick={()=>onSelect('plan')}>Пәнді таңдау <ArrowUpRight size={18}/></button></div>
             </article>
           </div>
         </section>

@@ -1,7 +1,7 @@
 'use client';
 
 import {useEffect, useMemo, useState} from 'react';
-import {Download, Plus, Trash2} from 'lucide-react';
+import {Download, Plus, Trash2, ChevronLeft, ChevronRight} from 'lucide-react';
 import {PLAN_TEMPLATES, DAYS, defaultPlan, isPlanDate, buildPlanSvg} from '@/lib/weeklyPlans';
 import PlanDatePicker from './PlanDatePicker';
 
@@ -56,7 +56,7 @@ export default function WeeklyPlanner({groups, activeGid, selectGroup, onChange,
     {!group ? <div className="planner-empty"><h1>Апталық жоспар</h1><p>Алдымен «Жұптық жұмыс» бөлімінде топ құрыңыз немесе топты таңдаңыз.</p></div> : <div className="planner-layout">
       <aside className="planner-controls">
         <label>Топ<select aria-label="Топ" value={activeGid} onChange={e=>selectGroup(e.target.value)}>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
-        <label>Апта<select aria-label="Апта" value={week} onChange={e=>setWeek(Number(e.target.value))}>{PLAN_TEMPLATES.map(t=><option key={t.week} value={t.week}>{t.week}-апта</option>)}</select></label>
+        <section className="plan-week-picker" aria-label="Аптаны таңдау"><div className="plan-week-heading"><button aria-label="Алдыңғы апта" disabled={week===1} onClick={()=>setWeek(w=>w-1)}><ChevronLeft size={18}/></button><strong aria-live="polite">{week}-апта <span>/ 17</span></strong><button aria-label="Келесі апта" disabled={week===17} onClick={()=>setWeek(w=>w+1)}><ChevronRight size={18}/></button></div><div className="plan-week-grid">{PLAN_TEMPLATES.map(t=><button key={t.week} aria-label={`${t.week}-апта`} aria-pressed={week===t.week} onClick={()=>setWeek(t.week)}>{t.week}</button>)}</div></section>
         <PlanDatePicker key={`${activeGid}-${week}`} start={plan.start} end={plan.end} onChange={update}/>
         <section><h2>Қосымша сабақтар</h2><p>Сабақты кез келген күнге қойыңыз.</p>
           {plan.events.map(event=><div className="planner-event" key={event.id}>

@@ -16,6 +16,7 @@ import WorkspaceHome from './WorkspaceHome';
 import Poster        from './Poster';
 import ExamScheduler from './ExamScheduler';
 import WeeklyPlanner from './WeeklyPlanner';
+import PlanSubjects, {PLAN_SUBJECTS} from './PlanSubjects';
 import {
   uid, makeSchedule, makeGenderedSchedule,
   parseStudents, normalizeText, normalizeGender,
@@ -159,6 +160,7 @@ export default function App() {
 
   /* ── Tab Switcher State ('hub' | 'pairs' | 'exam') ──────────────── */
   const [activeTab, setActiveTab] = useState('hub');
+  const [planSubject, setPlanSubject] = useState(null);
   const [showStudentList, setShowStudentList] = useState(false);
 
   /* ── Group State (Strictly isolated per username) ───────── */
@@ -975,7 +977,7 @@ export default function App() {
                 ← Басты мәзірге
               </button>
 
-              <div className="app-tabs" style={{ display: 'flex', background: '#eff0ff', borderRadius: '10px', padding: '3px', gap: '3px' }}>
+              {activeTab === 'plan' ? <nav className="app-tabs plan-subject-nav" aria-label="Жоспар пәндері"><button className="planner-tab" aria-current={!planSubject?'page':undefined} onClick={()=>setPlanSubject(null)}>Барлық пәндер</button>{PLAN_SUBJECTS.map(subject=><button key={subject.id} className="planner-tab" aria-current={planSubject===subject.id?'page':undefined} onClick={()=>setPlanSubject(subject.id)}>{subject.name}</button>)}</nav> : <div className="app-tabs" style={{ display: 'flex', background: '#eff0ff', borderRadius: '10px', padding: '3px', gap: '3px' }}>
                 <button
                   onClick={() => setActiveTab('pairs')}
                   aria-current={activeTab === 'pairs' ? 'page' : undefined}
@@ -1004,8 +1006,8 @@ export default function App() {
                 >
                   <Clock size={14} /> Сабақ тапсыру
                 </button>
-                <button className="planner-tab" aria-current={activeTab === 'plan' ? 'page' : undefined} onClick={() => setActiveTab('plan')}>Апталық жоспар</button>
-              </div>
+                <button className="planner-tab" onClick={() => {setPlanSubject(null);setActiveTab('plan');}}>Апталық жоспар</button>
+              </div>}
             </div>
           ) : (
             <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
@@ -1052,7 +1054,7 @@ export default function App() {
 
       {/* ══ WORKSPACE CONTENT: HUB vs TAB 1 vs TAB 2 ════════════ */}
       {activeTab === 'hub' ? (
-        <WorkspaceHome username={user?.username} onSelect={setActiveTab} />
+        <WorkspaceHome username={user?.username} onSelect={tab=>{if(tab==='plan')setPlanSubject(null);setActiveTab(tab);}} />
       ) : activeTab === 'pairs' ? (
         /* ════ TAB 1: «ЖҰПТЫҚ ЖҰМЫС» PAIRS GENERATOR ═══════════ */
         <div className="pair-workspace" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -1855,6 +1857,7 @@ export default function App() {
           </main>
         </div>
       ) : activeTab === 'plan' ? (
+        planSubject !== 'informatics' ? <PlanSubjects subject={planSubject} onSelect={setPlanSubject}/> :
         <WeeklyPlanner groups={groups} activeGid={activeGid} selectGroup={selectGroup} notify={notify}
           onChange={(gid, week, plan) => setGroups(current => current.map(g => g.id === gid ? {
             ...g, weeklyPlans: {...g.weeklyPlans, informatics: {...g.weeklyPlans?.informatics, [week]: plan}},
