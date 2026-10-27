@@ -19,7 +19,7 @@ export default function WeeklyPlanner({groups, activeGid, selectGroup, onChange,
       const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});
       const face=new FontFace('Plan Open Sans',`url(${data})`,{weight:'100 900'});
       await face.load();if(cancelled)return;document.fonts.add(face);
-      const ctx=document.createElement('canvas').getContext('2d');ctx.font='400 7px "Plan Open Sans"';
+      const ctx=document.createElement('canvas').getContext('2d');ctx.font='700 7px "Plan Open Sans"';
       setFont({data,measure:text=>ctx.measureText(text).width});
     }).catch(()=>{if(!cancelled)setError('Қаріп жүктелмеді. Бетті жаңартыңыз.');});
     return ()=>{cancelled=true;};
@@ -53,8 +53,7 @@ export default function WeeklyPlanner({groups, activeGid, selectGroup, onChange,
     finally{URL.revokeObjectURL(url);setDownloading(false);}
   }
   return <main className="weekly-planner">
-    <div className="workspace-heading"><h1>Апталық жоспар</h1><p>Информатика · 17 дайын апта. Өзгерістер тобыңызға автоматты сақталады.</p></div>
-    {!group ? <p>Алдымен «Жұптық жұмыс» бөлімінде топ құрыңыз немесе топты таңдаңыз.</p> : <div className="planner-layout">
+    {!group ? <div className="planner-empty"><h1>Апталық жоспар</h1><p>Алдымен «Жұптық жұмыс» бөлімінде топ құрыңыз немесе топты таңдаңыз.</p></div> : <div className="planner-layout">
       <aside className="planner-controls">
         <label>Топ<select aria-label="Топ" value={activeGid} onChange={e=>selectGroup(e.target.value)}>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
         <label>Апта<select aria-label="Апта" value={week} onChange={e=>setWeek(Number(e.target.value))}>{PLAN_TEMPLATES.map(t=><option key={t.week} value={t.week}>{t.week}-апта</option>)}</select></label>
@@ -69,7 +68,8 @@ export default function WeeklyPlanner({groups, activeGid, selectGroup, onChange,
         <details><summary>Апта мәтінін өзгерту</summary><p>Дайын тақырыптарды қажет болса түзетіңіз.</p>{plan.days.map((text,index)=><label key={index}>{index===5?'Сенбі / Жексенбі':DAYS[index]}<textarea rows={3} maxLength={350} value={text} onChange={e=>update({days:plan.days.map((v,i)=>i===index?e.target.value:v)})}/></label>)}</details>
       </aside>
       <section className="planner-preview" aria-label="Жоспардың алдын ала көрінісі">
-        <button className="brand-button" disabled={!svg || !isPlanDate(plan.start) || !isPlanDate(plan.end) || plan.end<plan.start || overflow || downloading} onClick={download}><Download size={18}/>{downloading?'Дайындалуда…':'Суретті жүктеу (PNG)'}</button>
+        <div className="workspace-heading"><span className="eyebrow">Куратор құралдары</span><h1>Апталық жоспар</h1><p>Информатика · 17 дайын апта. Өзгерістер тобыңызға автоматты сақталады.</p></div>
+        <div className="planner-actions"><button className="brand-button brand-button-dark" disabled={!svg || !isPlanDate(plan.start) || !isPlanDate(plan.end) || plan.end<plan.start || overflow || downloading} onClick={download}><Download size={18}/>{downloading?'Дайындалуда…':'Суретті жүктеу (PNG)'}</button></div>
         {(!isPlanDate(plan.start)||!isPlanDate(plan.end)) && <p>Жүктеу үшін апта күндерін белгілеңіз.</p>}
         {overflow && <p role="alert">Мәтін ұяшыққа сыймайды. Мәтінді қысқартыңыз немесе қосымша сабақты басқа күнге ауыстырыңыз.</p>}
         {error?<p role="alert">{error}</p>:svg?<div className="planner-poster" dangerouslySetInnerHTML={{__html:svg}}/>:<p role="status">Үлгі жүктелуде…</p>}
