@@ -2,15 +2,28 @@
 
 import {useEffect, useMemo, useState} from 'react';
 import {Download, Plus, Trash2} from 'lucide-react';
-import {PLAN_TEMPLATES, DAYS, defaultPlan, endOfWeek, buildPlanSvg} from '@/lib/weeklyPlans';
+import {PLAN_TEMPLATES, DAYS, defaultPlan, isPlanDate, buildPlanSvg} from '@/lib/weeklyPlans';
+import PlanDatePicker from './PlanDatePicker';
 
 export default function WeeklyPlanner({groups, activeGid, selectGroup, onChange, notify}) {
   const [week,setWeek]=useState(1);
   const [source,setSource]=useState('');
   const [error,setError]=useState('');
   const [downloading,setDownloading]=useState(false);
+  const [font,setFont]=useState(null);
   const group=groups.find(g=>g.id===activeGid);
   const plan=group?.weeklyPlans?.informatics?.[week] || defaultPlan(week);
+  useEffect(()=>{
+    let cancelled=false;
+    fetch('/fonts/OpenSans.ttf').then(r=>{if(!r.ok)throw new Error();return r.blob();}).then(async blob=>{
+      const data=await new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});
+      const face=new FontFace('Plan Open Sans',`url(${data})`,{weight:'100 900'});
+      await face.load();if(cancelled)return;document.fonts.add(face);
+      const ctx=document.createElement('canvas').getContext('2d');ctx.font='400 7px "Plan Open Sans"';
+      setFont({data,measure:text=>ctx.measureText(text).width});
+    }).catch(()=>{if(!cancelled)setError('Қаріп жүктелмеді. Бетті жаңартыңыз.');});
+    return ()=>{cancelled=true;};
+  },[]);
   useEffect(()=>{
     const controller=new AbortController();
     setSource('');setError('');
@@ -19,7 +32,8 @@ export default function WeeklyPlanner({groups, activeGid, selectGroup, onChange,
       .then(setSource).catch(e=>{if(e.name!=='AbortError')setError('Үлгі жүктелмеді. Бетті жаңартыңыз.');});
     return ()=>controller.abort();
   },[week]);
-  const svg=useMemo(()=>buildPlanSvg(source,plan),[source,plan]);
+  const svg=useMemo(()=>font?buildPlanSvg(source,plan,font.data,font.measure):'',[source,plan,font]);
+  const overflow=svg.includes('data-text-overflow="true"');
   const update=patch=>onChange(group.id,week,{...plan,...patch});
   const eventUpdate=(id,patch)=>update({events:plan.events.map(e=>e.id===id?{...e,...patch}:e)});
   async function download(){
@@ -44,7 +58,7 @@ export default function WeeklyPlanner({groups, activeGid, selectGroup, onChange,
       <aside className="planner-controls">
         <label>Топ<select aria-label="Топ" value={activeGid} onChange={e=>selectGroup(e.target.value)}>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
         <label>Апта<select aria-label="Апта" value={week} onChange={e=>setWeek(Number(e.target.value))}>{PLAN_TEMPLATES.map(t=><option key={t.week} value={t.week}>{t.week}-апта</option>)}</select></label>
-        <div className="planner-dates"><label>Басталуы<input type="date" value={plan.start} onChange={e=>update({start:e.target.value,end:endOfWeek(e.target.value)})}/></label><label>Аяқталуы<input type="date" min={plan.start} value={plan.end} onChange={e=>update({end:e.target.value})}/></label></div>
+        <PlanDatePicker key={`${activeGid}-${week}`} start={plan.start} end={plan.end} onChange={update}/>
         <section><h2>Қосымша сабақтар</h2><p>Сабақты кез келген күнге қойыңыз.</p>
           {plan.events.map(event=><div className="planner-event" key={event.id}>
             <label>Сабақ атауы<input value={event.title} maxLength={100} onChange={e=>eventUpdate(event.id,{title:e.target.value})}/></label>
@@ -55,8 +69,9 @@ export default function WeeklyPlanner({groups, activeGid, selectGroup, onChange,
         <details><summary>Апта мәтінін өзгерту</summary><p>Дайын тақырыптарды қажет болса түзетіңіз.</p>{plan.days.map((text,index)=><label key={index}>{index===5?'Сенбі / Жексенбі':DAYS[index]}<textarea rows={3} maxLength={350} value={text} onChange={e=>update({days:plan.days.map((v,i)=>i===index?e.target.value:v)})}/></label>)}</details>
       </aside>
       <section className="planner-preview" aria-label="Жоспардың алдын ала көрінісі">
-        <button className="brand-button" disabled={!svg || !plan.start || !plan.end || plan.end<plan.start || downloading} onClick={download}><Download size={18}/>{downloading?'Дайындалуда…':'Суретті жүктеу (PNG)'}</button>
-        {!plan.start && <p>Жүктеу үшін апта күндерін белгілеңіз.</p>}
+        <button className="brand-button" disabled={!svg || !isPlanDate(plan.start) || !isPlanDate(plan.end) || plan.end<plan.start || overflow || downloading} onClick={download}><Download size={18}/>{downloading?'Дайындалуда…':'Суретті жүктеу (PNG)'}</button>
+        {(!isPlanDate(plan.start)||!isPlanDate(plan.end)) && <p>Жүктеу үшін апта күндерін белгілеңіз.</p>}
+        {overflow && <p role="alert">Мәтін ұяшыққа сыймайды. Мәтінді қысқартыңыз немесе қосымша сабақты басқа күнге ауыстырыңыз.</p>}
         {error?<p role="alert">{error}</p>:svg?<div className="planner-poster" dangerouslySetInnerHTML={{__html:svg}}/>:<p role="status">Үлгі жүктелуде…</p>}
       </section>
     </div>}

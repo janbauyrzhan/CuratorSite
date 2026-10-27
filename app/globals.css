@@ -179,5 +179,26 @@ button:disabled { cursor: not-allowed; }
 .planner-poster { margin-top: 18px; border-radius: 12px; overflow: hidden; box-shadow: 0 6px 24px #1421370d; }
 .planner-poster svg { display: block; width: 100%; height: auto; }
 .planner-preview button:disabled { opacity: .5; cursor: not-allowed; }
+.plan-date-picker { position: relative; }
+.plan-date-label { display: block; font-size: 12px; color: #334155; margin-bottom: 8px; }
+.plan-date-trigger { display: flex; align-items: center; gap: 10px; width: 100%; background: #faf9ff; border: 1px solid #d8d6ed; padding: 13px 10px; border-radius: 8px; color: #45418f; cursor: pointer; font-size: 12px; text-align: left; }
+.plan-calendar { position: absolute; top: 58px; left: -8px; width: 296px; max-width: calc(100vw - 64px); z-index: 10; padding: 12px; border-radius: 14px; background: white; border: 1px solid #e5e3ef; box-shadow: 0 12px 40px #24204426; }
+.plan-date-tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.plan-date-tabs button { background: #f8f8fa; border: 1px solid transparent; padding: 8px; border-radius: 8px; color: #334155; font-size: 11px; text-align: left; cursor: pointer; }
+.plan-date-tabs button[aria-pressed="true"] { background: #f0eefe; border-color: #7771c7; }
+.plan-date-tabs small { display: block; margin-bottom: 4px; color: #64748b; }
+.plan-calendar-month { display: grid; grid-template-columns: 24px 1fr 78px 24px; align-items: center; gap: 3px; margin: 14px 0; }
+.plan-calendar-month button,.plan-calendar-footer button { border: 0; background: transparent; color: #514fb1; cursor: pointer; padding: 4px; }
+.plan-calendar-month select { font-size: 12px; padding: 5px; }
+.plan-calendar-grid { display: grid; grid-template-columns: repeat(7,1fr); gap: 2px; text-align: center; }
+.plan-calendar-grid>span { font-size: 11px; padding: 6px 0; color: #778090; }
+.plan-calendar-grid button { border: 0; background: white; color: #243444; min-height: 34px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+.plan-calendar-grid button:hover { background: #e9e6fb; }
+.plan-calendar-grid .in-range { background: #f0eefe; }
+.plan-calendar-grid .selected { background: #514fb1; color: white; }
+.plan-calendar-grid button[aria-current="date"] { box-shadow: inset 0 0 0 1px #514fb1; }
+.plan-calendar button:disabled { opacity: .3; cursor: not-allowed; }
+.plan-calendar-footer { display: flex; justify-content: space-between; border-top: 1px solid #eee; padding-top: 10px; margin-top: 10px; font-size: 12px; }
+.plan-date-picker button:focus-visible { outline: 2px solid #7771c7; outline-offset: 2px; }
 @media(max-width: 900px) { .planner-layout { grid-template-columns: 270px minmax(0,1fr); gap: 16px; } .weekly-planner { padding: 18px; } }
 @media(max-width: 700px) { .planner-layout { grid-template-columns: 1fr; } .planner-preview { position: static; } .module-grid-four { grid-template-columns: 1fr; } }
