@@ -3,19 +3,24 @@
 import {useEffect, useMemo, useState} from 'react';
 import {Download, Plus, Trash2, ChevronLeft, ChevronRight} from 'lucide-react';
 import {PLAN_TEMPLATES, DAYS, defaultPlan, isPlanDate, buildPlanSvg} from '@/lib/weeklyPlans';
+import {MATH_PLAN_TEMPLATES} from '@/lib/mathPlans';
 import PlanDatePicker from './PlanDatePicker';
 import OptionalTime from './OptionalTime';
 
-export default function WeeklyPlanner({userId, syncState, groups, activeGid, selectGroup, onChange, notify}) {
-  const [week,setWeek]=useState(1);
+export default function WeeklyPlanner({userId, syncState, groups, activeGid, selectGroup, onChange, notify, subject='informatics'}) {
+  const templates=subject==='mathematics'?MATH_PLAN_TEMPLATES:PLAN_TEMPLATES;
+  const firstWeek=templates[0].week;
+  const lastWeek=templates[templates.length-1].week;
+  const subjectName=subject==='mathematics'?'Математика':'Информатика';
+  const [week,setWeek]=useState(subject==='mathematics'?0:1);
   const [source,setSource]=useState('');
   const [error,setError]=useState('');
   const [downloading,setDownloading]=useState(false);
   const [font,setFont]=useState(null);
   const group=groups.find(g=>g.id===activeGid);
-  const plan=group?.weeklyPlans?.informatics?.[week] || defaultPlan(week);
-  useEffect(()=>{try{const saved=Number(localStorage.getItem(`plan-week:${userId}:${activeGid}`));setWeek(saved>=1&&saved<=17?saved:1);}catch{}},[userId,activeGid]);
-  const chooseWeek=value=>{const next=typeof value==='function'?value(week):value;setWeek(next);try{localStorage.setItem(`plan-week:${userId}:${activeGid}`,String(next));}catch{}};
+  const plan=group?.weeklyPlans?.[subject]?.[week] || defaultPlan(week,templates);
+  useEffect(()=>{try{const key=`plan-week:${subject}:${userId}:${activeGid}`;const stored=localStorage.getItem(key);const legacy=subject==='informatics'?localStorage.getItem(`plan-week:${userId}:${activeGid}`):null;const saved=Number(stored??legacy);setWeek((stored!==null||legacy!==null)&&Number.isInteger(saved)&&saved>=firstWeek&&saved<=lastWeek?saved:firstWeek);}catch{setWeek(firstWeek);}},[userId,activeGid,subject,firstWeek,lastWeek]);
+  const chooseWeek=value=>{const next=typeof value==='function'?value(week):value;setWeek(next);try{localStorage.setItem(`plan-week:${subject}:${userId}:${activeGid}`,String(next));}catch{}};
   useEffect(()=>{
     let cancelled=false;
     const load=async path=>{const r=await fetch(path);if(!r.ok)throw new Error();const blob=await r.blob();return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(reader.result);reader.onerror=reject;reader.readAsDataURL(blob);});};
@@ -31,14 +36,15 @@ export default function WeeklyPlanner({userId, syncState, groups, activeGid, sel
   useEffect(()=>{
     const controller=new AbortController();
     setSource('');setError('');
-    fetch(`/weekly-plans/informatics/${PLAN_TEMPLATES[week-1].file}.svg`,{signal:controller.signal})
+    const template=templates.find(item=>item.week===week);
+    fetch(`/weekly-plans/${subject}/${template.file}.svg`,{signal:controller.signal})
       .then(r=>{if(!r.ok)throw new Error();return r.text();})
       .then(setSource).catch(e=>{if(e.name!=='AbortError')setError('Үлгі жүктелмеді. Бетті жаңартыңыз.');});
     return ()=>controller.abort();
-  },[week]);
+  },[week,subject,templates]);
   const svg=useMemo(()=>font?buildPlanSvg(source,plan,font.data,font.measure,font.italic,week):'',[source,plan,font,week]);
   const overflow=svg.includes('data-text-overflow="true"');
-  const update=patch=>onChange(group.id,week,{...plan,...patch});
+  const update=patch=>onChange(group.id,week,{...plan,...patch},subject);
   const eventUpdate=(id,patch)=>update({events:plan.events.map(e=>e.id===id?{...e,...patch}:e)});
   async function download(){
     setDownloading(true);
@@ -51,7 +57,7 @@ export default function WeeklyPlanner({userId, syncState, groups, activeGid, sel
       const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/png'));
       if(!blob)throw new Error();
       const png=URL.createObjectURL(blob), a=document.createElement('a');
-      a.href=png;a.download=`informatics-week-${week}.png`;a.click();
+      a.href=png;a.download=`${subject}-week-${week}.png`;a.click();
       setTimeout(()=>URL.revokeObjectURL(png),1000);
     } catch {notify('Суретті жүктеу мүмкін болмады. Қайта көріңіз.');}
     finally{URL.revokeObjectURL(url);setDownloading(false);}
@@ -60,7 +66,7 @@ export default function WeeklyPlanner({userId, syncState, groups, activeGid, sel
     {!group ? <div className="planner-empty"><h1>Апталық жоспар</h1><p>Алдымен «Жұптық жұмыс» бөлімінде топ құрыңыз немесе топты таңдаңыз.</p></div> : <div className="planner-layout">
       <aside className="planner-controls">
         <label>Топ<select aria-label="Топ" value={activeGid} onChange={e=>selectGroup(e.target.value)}>{groups.map(g=><option key={g.id} value={g.id}>{g.name}</option>)}</select></label>
-        <section className="plan-week-picker" aria-label="Аптаны таңдау"><div className="plan-week-heading"><button aria-label="Алдыңғы апта" disabled={week===1} onClick={()=>chooseWeek(w=>w-1)}><ChevronLeft size={18}/></button><strong aria-live="polite">{week}-апта <span>/ 17</span></strong><button aria-label="Келесі апта" disabled={week===17} onClick={()=>chooseWeek(w=>w+1)}><ChevronRight size={18}/></button></div><div className="plan-week-grid">{PLAN_TEMPLATES.map(t=><button key={t.week} aria-label={`${t.week}-апта`} aria-pressed={week===t.week} onClick={()=>chooseWeek(t.week)}>{t.week}</button>)}</div></section>
+        <section className="plan-week-picker" aria-label="Аптаны таңдау"><div className="plan-week-heading"><button aria-label="Алдыңғы апта" disabled={week===firstWeek} onClick={()=>chooseWeek(w=>w-1)}><ChevronLeft size={18}/></button><strong aria-live="polite">{week}-апта <span>/ {templates.length}</span></strong><button aria-label="Келесі апта" disabled={week===lastWeek} onClick={()=>chooseWeek(w=>w+1)}><ChevronRight size={18}/></button></div><div className="plan-week-grid">{templates.map(t=><button key={t.week} aria-label={`${t.week}-апта`} aria-pressed={week===t.week} onClick={()=>chooseWeek(t.week)}>{t.week}</button>)}</div></section>
         <PlanDatePicker key={`${activeGid}-${week}`} start={plan.start} end={plan.end} onChange={update}/>
         <section><h2>Қосымша сабақтар</h2><p>Сабақты кез келген күнге қойыңыз.</p>
           {plan.events.map(event=><div className="planner-event" key={event.id}>
@@ -73,7 +79,7 @@ export default function WeeklyPlanner({userId, syncState, groups, activeGid, sel
         <details><summary>Апта мәтінін өзгерту</summary><p>Дайын тақырыптарды қажет болса түзетіңіз.</p>{plan.days.map((text,index)=><label key={index}>{index===5?'Сенбі / Жексенбі':DAYS[index]}<textarea rows={3} maxLength={350} value={text} onChange={e=>update({days:plan.days.map((v,i)=>i===index?e.target.value:v)})}/></label>)}</details>
       </aside>
       <section className="planner-preview" aria-label="Жоспардың алдын ала көрінісі">
-        <div className="workspace-heading"><span className="eyebrow">Куратор құралдары</span><h1>Апталық жоспар</h1></div>
+        <div className="workspace-heading"><span className="eyebrow">{subjectName}</span><h1>Апталық жоспар</h1></div>
         <div className="planner-actions"><button className="brand-button brand-button-dark" disabled={!svg || !isPlanDate(plan.start) || !isPlanDate(plan.end) || plan.end<plan.start || overflow || downloading} onClick={download}><Download size={18}/>{downloading?'Дайындалуда…':'Суретті жүктеу (PNG)'}</button></div>
         {overflow && <p role="alert">Мәтін ұяшыққа сыймайды. Мәтінді қысқартыңыз немесе қосымша сабақты басқа күнге ауыстырыңыз.</p>}
         {error?<p role="alert">{error}</p>:svg?<div className="planner-poster" dangerouslySetInnerHTML={{__html:svg}}/>:<p role="status">Үлгі жүктелуде…</p>}
