@@ -1872,7 +1872,7 @@ export default function App() {
           </main>
         </div>
       ) : activeTab === 'plan' ? (
-        !['informatics','mathematics'].includes(planSubject) ? <PlanSubjects subject={planSubject} onSelect={setPlanSubject}/> :
+        !['informatics','mathematics','physics'].includes(planSubject) ? <PlanSubjects subject={planSubject} onSelect={setPlanSubject}/> :
         <WeeklyPlanner userId={user?.id} syncState={syncState} groups={groups} activeGid={activeGid} selectGroup={selectGroup} notify={notify} subject={planSubject}
           onChange={(gid, week, plan, subject=planSubject) => {try{writePlanDraft(user.id,gid,week,plan,subject);}catch{notify('Құрылғыға сақтау мүмкін болмады. Cloud сақталуын күтіңіз.');}setGroups(current => current.map(g => g.id === gid ? {
             ...g, weeklyPlans: {...g.weeklyPlans, [subject]: {...g.weeklyPlans?.[subject], [week]: plan}},

@@ -4,14 +4,15 @@ import {useEffect, useMemo, useState} from 'react';
 import {Download, Plus, Trash2, ChevronLeft, ChevronRight} from 'lucide-react';
 import {PLAN_TEMPLATES, DAYS, defaultPlan, isPlanDate, buildPlanSvg} from '@/lib/weeklyPlans';
 import {MATH_PLAN_TEMPLATES} from '@/lib/mathPlans';
+import {PHYSICS_PLAN_TEMPLATES} from '@/lib/physicsPlans';
 import PlanDatePicker from './PlanDatePicker';
 import OptionalTime from './OptionalTime';
 
 export default function WeeklyPlanner({userId, syncState, groups, activeGid, selectGroup, onChange, notify, subject='informatics'}) {
-  const templates=subject==='mathematics'?MATH_PLAN_TEMPLATES:PLAN_TEMPLATES;
+  const templates=subject==='mathematics'?MATH_PLAN_TEMPLATES:subject==='physics'?PHYSICS_PLAN_TEMPLATES:PLAN_TEMPLATES;
   const firstWeek=templates[0].week;
   const lastWeek=templates[templates.length-1].week;
-  const subjectName=subject==='mathematics'?'Математика':'Информатика';
+  const subjectName=subject==='mathematics'?'Математика':subject==='physics'?'Физика':'Информатика';
   const [week,setWeek]=useState(subject==='mathematics'?0:1);
   const [source,setSource]=useState('');
   const [error,setError]=useState('');
