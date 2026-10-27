@@ -4,6 +4,7 @@ import {useEffect, useMemo, useState} from 'react';
 import {Download, Plus, Trash2, ChevronLeft, ChevronRight} from 'lucide-react';
 import {PLAN_TEMPLATES, DAYS, defaultPlan, isPlanDate, buildPlanSvg} from '@/lib/weeklyPlans';
 import PlanDatePicker from './PlanDatePicker';
+import OptionalTime from './OptionalTime';
 
 export default function WeeklyPlanner({userId, syncState, groups, activeGid, selectGroup, onChange, notify}) {
   const [week,setWeek]=useState(1);
@@ -65,7 +66,7 @@ export default function WeeklyPlanner({userId, syncState, groups, activeGid, sel
           {plan.events.map(event=><div className="planner-event" key={event.id}>
             <label>Сабақ атауы<input value={event.title} maxLength={100} onChange={e=>eventUpdate(event.id,{title:e.target.value})}/></label>
             <div className="plan-format" role="group" aria-label="Мәтін пішімі"><button aria-pressed={event.bold===false&&!event.italic} onClick={()=>eventUpdate(event.id,{bold:false,italic:false})}>Қалыпты</button><button aria-label="Қалың мәтін" aria-pressed={event.bold!==false} onClick={()=>eventUpdate(event.id,{bold:event.bold===false})}><b>B</b></button><button aria-label="Курсив" aria-pressed={!!event.italic} onClick={()=>eventUpdate(event.id,{italic:!event.italic})}><i>I</i></button></div>
-            <div className="planner-event-row"><label>Күн<select aria-label="Күн" value={event.day} onChange={e=>eventUpdate(event.id,{day:Number(e.target.value)})}>{DAYS.map((day,i)=><option value={i} key={day}>{day}</option>)}</select></label><label>Уақыт<input type="time" value={event.time} onChange={e=>eventUpdate(event.id,{time:e.target.value})}/></label><button className="planner-delete" aria-label={`${event.title} жою`} onClick={()=>update({events:plan.events.filter(e=>e.id!==event.id)})}><Trash2 size={17}/></button></div>
+            <div className="planner-event-row"><label>Күн<select aria-label="Күн" value={event.day} onChange={e=>eventUpdate(event.id,{day:Number(e.target.value)})}>{DAYS.map((day,i)=><option value={i} key={day}>{day}</option>)}</select></label><OptionalTime key={`${activeGid}-${week}-${event.id}`} value={event.time} onChange={time=>eventUpdate(event.id,{time})}/><button className="planner-delete" aria-label={`${event.title} жою`} onClick={()=>update({events:plan.events.filter(e=>e.id!==event.id)})}><Trash2 size={17}/></button></div>
           </div>)}
           <div className="planner-add">{['Практикалық сабақ','Кураторлық сабақ','Ивент'].map(title=><button key={title} onClick={()=>update({events:[...plan.events,{id:crypto.randomUUID(),title,day:0,time:'',bold:true,italic:false}]})}><Plus size={15}/>{title}</button>)}</div>
         </section>

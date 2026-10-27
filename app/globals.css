@@ -160,9 +160,6 @@ button:disabled { cursor: not-allowed; }
 .planner-tab { padding: 6px 16px; border: 0; border-radius: 7px; background: transparent; color: #6b7280; font-weight: 700; cursor: pointer; }
 .planner-tab[aria-current="page"] { background: white; color: #514fb1; }
 .plan-subject-nav { display: flex; flex-wrap: wrap; gap: 4px; padding: 3px; background: #eff0ff; border-radius: 10px; }
-.plan-header-info { display:flex; flex-direction:column; gap:3px; margin-left:auto; font-size:11px; color:#73766b; white-space:nowrap; }
-.plan-header-info strong { font-weight:500; }
-@media(max-width:700px) { .plan-header-info { flex-direction:row; gap:8px; margin-left:0; } }
 .plan-subject-page { flex: 1; overflow-y: auto; padding: 44px max(24px, calc((100vw - 1120px) / 2)); background: #f8f8f3; }
 .plan-subject-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 20px; margin-top: 30px; }
 .plan-subject-card { display: grid; grid-template-columns: 64px 1fr 24px; column-gap: 18px; row-gap: 6px; align-items: center; padding: 26px; border: 1px solid #e4e3dc; border-radius: 14px; background: white; color: #243444; text-align: left; cursor: pointer; }
@@ -200,7 +197,13 @@ button:disabled { cursor: not-allowed; }
 .plan-format { display:flex; gap:6px; margin-top:8px; }
 .plan-format button { border:1px solid #dedbea; background:white; color:#514fb1; padding:6px 10px; border-radius:6px; cursor:pointer; font-size:12px; }
 .plan-format button[aria-pressed="true"] { background:#eeebff; border-color:#7771c7; }
-.planner-event-row { display: grid; grid-template-columns: 1fr 90px 24px; gap: 6px; align-items: end; margin-top: 8px; }
+.planner-event-row { display: grid; grid-template-columns: 1fr 120px 24px; gap: 6px; align-items: end; margin-top: 8px; }
+.optional-time { min-width:0; }
+.optional-time label { font-size:10px; }
+.optional-time-field { display:block; position:relative; }
+.optional-time-field input { padding-right:28px; }
+.optional-time-field button { position:absolute; right:5px; top:50%; transform:translateY(-50%); border:0; background:transparent; color:#64748b; padding:4px; cursor:pointer; }
+.optional-time small { color:#b91c1c; font-size:10px; }
 .planner-delete { background: none; color: #b54141; border: 0; padding: 8px 0; cursor: pointer; }
 .planner-add { display: grid; gap: 8px; margin-top: 12px; }
 .planner-add button { display: flex; align-items: center; gap: 6px; padding: 10px; border: 1px solid #dfdef1; color: #514fb1; background: #f6f5fd; border-radius: 7px; cursor: pointer; }

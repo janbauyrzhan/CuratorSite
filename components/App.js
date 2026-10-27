@@ -1032,7 +1032,6 @@ export default function App() {
         </div>
 
         {/* User Auth Info & Logout Button */}
-        {activeTab==='plan'&&planSubject==='informatics'&&<div className="plan-header-info" title="Өзгерістер тобыңызға автоматты сақталады."><strong>Информатика</strong><span>17 дайын апта</span></div>}
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }} className="app-account">
           {user && (
             <div style={{
