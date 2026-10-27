@@ -15,6 +15,7 @@ import AuthPanel     from './AuthPanel';
 import WorkspaceHome from './WorkspaceHome';
 import Poster        from './Poster';
 import ExamScheduler from './ExamScheduler';
+import WeeklyPlanner from './WeeklyPlanner';
 import {
   uid, makeSchedule, makeGenderedSchedule,
   parseStudents, normalizeText, normalizeGender,
@@ -1003,6 +1004,7 @@ export default function App() {
                 >
                   <Clock size={14} /> Сабақ тапсыру
                 </button>
+                <button className="planner-tab" aria-current={activeTab === 'plan' ? 'page' : undefined} onClick={() => setActiveTab('plan')}>Апталық жоспар</button>
               </div>
             </div>
           ) : (
@@ -1852,6 +1854,11 @@ export default function App() {
             </div>
           </main>
         </div>
+      ) : activeTab === 'plan' ? (
+        <WeeklyPlanner groups={groups} activeGid={activeGid} selectGroup={selectGroup} notify={notify}
+          onChange={(gid, week, plan) => setGroups(current => current.map(g => g.id === gid ? {
+            ...g, weeklyPlans: {...g.weeklyPlans, informatics: {...g.weeklyPlans?.informatics, [week]: plan}},
+          } : g))} />
       ) : (
         /* ════ TAB 2: «САБАҚ ТАПСЫРУ» EXAM SCHEDULER ═══════════ */
         <ExamScheduler

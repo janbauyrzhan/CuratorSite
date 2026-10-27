@@ -155,3 +155,29 @@ button:disabled { cursor: not-allowed; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: #d0d0c6; border-radius: 6px; }
 ::-webkit-scrollbar-thumb:hover { background: #abab9e; }
+.module-grid-four { grid-template-columns: repeat(2,minmax(0,1fr)); }
+.module-card-plan .module-visual { background: #e9f1f6; color: #38627a; }
+.planner-tab { padding: 6px 16px; border: 0; border-radius: 7px; background: transparent; color: #6b7280; font-weight: 700; cursor: pointer; }
+.planner-tab[aria-current="page"] { background: white; color: #514fb1; }
+.weekly-planner { flex: 1; overflow: auto; padding: 28px; background: #f8f8f3; }
+.planner-layout { display: grid; grid-template-columns: 320px minmax(0,1fr); gap: 28px; margin-top: 24px; align-items: start; }
+.planner-controls { display: grid; gap: 20px; background: white; padding: 22px; border-radius: 12px; }
+.planner-controls label { display: grid; gap: 7px; font-size: 12px; color: #334155; min-width: 0; }
+.planner-controls input,.planner-controls select,.planner-controls textarea { width: 100%; min-width: 0; border: 1px solid #dce0e8; border-radius: 7px; padding: 9px; background: white; color: #172a3a; font: inherit; }
+.planner-controls textarea { resize: vertical; }
+.planner-controls h2 { font-size: 16px; margin: 0; }
+.planner-controls p,.planner-preview>p { font-size: 12px; color: #64748b; line-height: 1.6; }
+.planner-dates { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.planner-event { padding: 12px 0; border-bottom: 1px solid #eee; }
+.planner-event-row { display: grid; grid-template-columns: 1fr 90px 24px; gap: 6px; align-items: end; margin-top: 8px; }
+.planner-delete { background: none; color: #b54141; border: 0; padding: 8px 0; cursor: pointer; }
+.planner-add { display: grid; gap: 8px; margin-top: 12px; }
+.planner-add button { display: flex; align-items: center; gap: 6px; padding: 10px; border: 1px solid #dfdef1; color: #514fb1; background: #f6f5fd; border-radius: 7px; cursor: pointer; }
+.planner-controls summary { cursor: pointer; font-size: 13px; }
+.planner-controls details label { margin-top: 12px; }
+.planner-preview { min-width: 0; position: sticky; top: 0; }
+.planner-poster { margin-top: 18px; border-radius: 12px; overflow: hidden; box-shadow: 0 6px 24px #1421370d; }
+.planner-poster svg { display: block; width: 100%; height: auto; }
+.planner-preview button:disabled { opacity: .5; cursor: not-allowed; }
+@media(max-width: 900px) { .planner-layout { grid-template-columns: 270px minmax(0,1fr); gap: 16px; } .weekly-planner { padding: 18px; } }
+@media(max-width: 700px) { .planner-layout { grid-template-columns: 1fr; } .planner-preview { position: static; } .module-grid-four { grid-template-columns: 1fr; } }

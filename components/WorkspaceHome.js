@@ -1,4 +1,4 @@
-import { ArrowUpRight, Users, Clock, Cpu, Instagram } from 'lucide-react';
+import { ArrowUpRight, Users, Clock, Cpu, Instagram, CalendarDays } from 'lucide-react';
 
 export default function WorkspaceHome({ username, onSelect }) {
   return (
@@ -21,7 +21,7 @@ export default function WorkspaceHome({ username, onSelect }) {
           <div className="home-section-heading">
             <div><h2 id="modules-title">Жұмыс құралдары</h2></div>
           </div>
-          <div className="module-grid">
+          <div className="module-grid module-grid-four">
             <article className="module-card module-card-pairs">
               <div className="module-visual" aria-hidden="true"><Users size={46} strokeWidth={1.4} /><span className="module-visual-label">Бірге үйренеміз</span><span className="module-number">01</span></div>
               <div className="module-content">
@@ -45,6 +45,10 @@ export default function WorkspaceHome({ username, onSelect }) {
                 <p>Автоматтандыру жобасымен танысып, оның қалай жұмыс істейтінін YouTube-та көріңіз.</p>
                 <a className="brand-button" href="https://youtu.be/VJF8I3vDvgo?si=jtned4dcu7_Is8mA" target="_blank" rel="noreferrer">YouTube-та көру <ArrowUpRight size={18} /></a>
               </div>
+            </article>
+            <article className="module-card module-card-plan">
+              <div className="module-visual" aria-hidden="true"><CalendarDays size={46} strokeWidth={1.4}/><span className="module-visual-label">Аптаңызды жоспарлаңыз</span><span className="module-number">04</span></div>
+              <div className="module-content"><h3>Апталық жоспар</h3><p>Информатикадан 17 дайын апта. Күндерді өзгертіп, практикалық және кураторлық сабақтарды қосыңыз.</p><button className="brand-button" onClick={()=>onSelect('plan')}>Жоспарды дайындау <ArrowUpRight size={18}/></button></div>
             </article>
           </div>
         </section>
