@@ -16,6 +16,7 @@ import WorkspaceHome from './WorkspaceHome';
 import Poster        from './Poster';
 import ExamScheduler from './ExamScheduler';
 import WeeklyPlanner from './WeeklyPlanner';
+import {readPlanDrafts,writePlanDraft,mergePlanDrafts,acknowledgePlanDrafts} from '@/lib/planDrafts';
 import PlanSubjects, {PLAN_SUBJECTS} from './PlanSubjects';
 import {
   uid, makeSchedule, makeGenderedSchedule,
@@ -156,6 +157,11 @@ export default function App() {
   const [legacyImportId, setLegacyImportId] = useState('');
   const [syncState, setSyncState] = useState('saved');
   const hydrationId = useRef(0);
+  const hydratedUserId = useRef(null);
+  const saveQueue = useRef(Promise.resolve());
+  const saveVersion = useRef(0);
+  const [syncRetry,setSyncRetry]=useState(0);
+  useEffect(()=>{const retry=()=>setSyncRetry(n=>n+1);window.addEventListener('online',retry);return()=>window.removeEventListener('online',retry);},[]);
   const supabase = useMemo(() => getSupabaseClient(), []);
 
   /* ── Tab Switcher State ('hub' | 'pairs' | 'exam') ──────────────── */
@@ -222,6 +228,7 @@ export default function App() {
   }, []);
 
   const hydrateWorkspace = useCallback(async (authUser) => {
+    if(hydratedUserId.current===authUser.id)return;
     const requestId = ++hydrationId.current;
     const cacheKey = `infologia-workspace-cache:${authUser.id}`;
     let cachedWorkspace = null;
@@ -233,7 +240,7 @@ export default function App() {
     }
 
     const applyWorkspace = (workspace) => {
-      const savedGroups = Array.isArray(workspace?.groups) ? workspace.groups : [];
+      const savedGroups = mergePlanDrafts(Array.isArray(workspace?.groups) ? workspace.groups : [],readPlanDrafts(authUser.id));
       setGroups(savedGroups);
       const selectedGid = workspace?.activeGid || savedGroups[0]?.id || null;
       setActiveGid(selectedGid);
@@ -285,6 +292,7 @@ export default function App() {
     clearLegacyCredentials();
     setWorkspaceLoaded(true);
     setCloudHydrated(true);
+    hydratedUserId.current=authUser.id;
     setSyncState(data ? 'saved' : 'saving');
   }, [supabase]);
 
@@ -301,11 +309,13 @@ export default function App() {
             setRecoveryMode(event === 'PASSWORD_RECOVERY');
             void hydrateWorkspace(session.user).then(() => setAuthLoaded(true));
           } else {
+            hydratedUserId.current=null;
             hydrationId.current++;
             setUser(null); setWorkspaceLoaded(false); setCloudHydrated(false); setWorkspaceError('');
             resetWorkspace(); setAuthLoaded(true);
           }
         } else if (event === 'SIGNED_OUT') {
+          hydratedUserId.current=null;
           hydrationId.current++;
           setUser(null); setWorkspaceLoaded(false); setCloudHydrated(false); setWorkspaceError('');
           setRecoveryMode(false); setLegacyWorkspaces([]); resetWorkspace(); setAuthLoaded(true);
@@ -319,8 +329,11 @@ export default function App() {
   useEffect(() => {
     if (!supabase || !user?.id || !workspaceLoaded || !cloudHydrated || workspaceError) return;
     const data = { groups, activeGid, weekIdx, divType };
-    const timer = setTimeout(async () => {
-      setSyncState('saving');
+    const version=++saveVersion.current;
+    setSyncState('saving');
+    const timer = setTimeout(() => {
+      saveQueue.current=saveQueue.current.catch(()=>{}).then(async()=>{
+      if(hydratedUserId.current!==user.id)return;
       const { error } = await supabase.from('user_workspaces').upsert({
         user_id: user.id,
         data,
@@ -330,11 +343,13 @@ export default function App() {
         setSyncState('error');
         notify('Cloud-қа сақтау қатесі: ' + (error.message || 'Қайта көріңіз'));
       } else {
-        setSyncState('saved');
+        acknowledgePlanDrafts(user.id,data.groups);
+        if(version===saveVersion.current)setSyncState('saved');
       }
+      }).catch(()=>{setSyncState('error');});
     }, 700);
     return () => clearTimeout(timer);
-  }, [supabase, user, groups, activeGid, weekIdx, divType, workspaceLoaded, cloudHydrated, workspaceError, notify]);
+  }, [supabase, user, groups, activeGid, weekIdx, divType, workspaceLoaded, cloudHydrated, workspaceError, notify,syncRetry]);
 
   // Keep a user-scoped copy for instant rendering on the next visit or tab restore.
   useEffect(() => {
@@ -1858,10 +1873,10 @@ export default function App() {
         </div>
       ) : activeTab === 'plan' ? (
         planSubject !== 'informatics' ? <PlanSubjects subject={planSubject} onSelect={setPlanSubject}/> :
-        <WeeklyPlanner groups={groups} activeGid={activeGid} selectGroup={selectGroup} notify={notify}
-          onChange={(gid, week, plan) => setGroups(current => current.map(g => g.id === gid ? {
+        <WeeklyPlanner userId={user?.id} syncState={syncState} groups={groups} activeGid={activeGid} selectGroup={selectGroup} notify={notify}
+          onChange={(gid, week, plan) => {try{writePlanDraft(user.id,gid,week,plan);}catch{notify('Құрылғыға сақтау мүмкін болмады. Cloud сақталуын күтіңіз.');}setGroups(current => current.map(g => g.id === gid ? {
             ...g, weeklyPlans: {...g.weeklyPlans, informatics: {...g.weeklyPlans?.informatics, [week]: plan}},
-          } : g))} />
+          } : g));}} />
       ) : (
         /* ════ TAB 2: «САБАҚ ТАПСЫРУ» EXAM SCHEDULER ═══════════ */
         <ExamScheduler
