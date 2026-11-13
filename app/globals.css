@@ -63,16 +63,32 @@ button:disabled { cursor: not-allowed; }
 .module-visual-label { position: relative; z-index: 1; font-size: 15px; font-weight: 500; }
 .module-number { margin-left: auto; font-size: 76px; font-weight: 600; line-height: 1; letter-spacing: -.06em; opacity: .12; }
 .module-card-exam .module-visual { color: #53644b; background: #eff1e5; }
-.module-card-automation .module-visual { color: #9b5b35; background: #f7eee7; }
+.module-card-certificates .module-visual { color: #9b5b35; background: #f7eee7; }
 .module-content { padding: 20px 2px 0; }
 .module-content h3 { margin: 8px 0 10px; font-size: 23px; font-weight: 600; letter-spacing: -.025em; }
 .module-content > p { max-width: 460px; color: #75766f; font-size: 12px; line-height: 1.8; margin: 0 0 22px; min-height: 44px; }
 .workspace-footer { display: flex; align-items: center; justify-content: space-between; gap: 20px; border-top: 1px solid var(--line); padding: 22px 0; }
 .workspace-footer > img { width: 94px; height: 25px; object-fit: contain; filter: brightness(0); opacity: .75; }
 .workspace-footer > span { color: #8a8b84; font-size: 10px; }
+.workspace-footer-links { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 12px 20px; }
 .workspace-social-link { display: inline-flex; align-items: center; gap: 7px; color: var(--brand); font-size: 11px; font-weight: 600; text-decoration: none; }
 .workspace-social-link:hover { color: var(--brand-dark); text-decoration: underline; text-underline-offset: 3px; }
 .workspace-social-link:focus-visible { outline: 2px solid var(--brand); outline-offset: 4px; border-radius: 3px; }
+.certificate-tab { display: inline-flex; align-items: center; gap: 6px; }
+.certificate-empty {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  max-width: 1060px;
+  margin-top: 22px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+}
+.certificate-empty > svg { flex-shrink: 0; color: #9b5b35; }
+.certificate-empty h2 { margin: 0 0 4px; font-size: 15px; font-weight: 600; }
+.certificate-empty p { margin: 0; color: #67685e; font-size: 12px; }
 
 /* Shared workspace controls. Exported SVG posters retain their own styles. */
 .pair-workspace { min-height: 0; }

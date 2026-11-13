@@ -1,4 +1,4 @@
-import { ArrowUpRight, Users, Clock, Cpu, Instagram, CalendarDays } from 'lucide-react';
+import { ArrowUpRight, Users, Clock, Award, Cpu, Instagram, CalendarDays } from 'lucide-react';
 
 export default function WorkspaceHome({ username, onSelect }) {
   return (
@@ -38,12 +38,12 @@ export default function WorkspaceHome({ username, onSelect }) {
                 <button className="brand-button" onClick={() => onSelect('exam')}>Кестені дайындау <ArrowUpRight size={18} /></button>
               </div>
             </article>
-            <article className="module-card module-card-automation">
-              <div className="module-visual" aria-hidden="true"><Cpu size={46} strokeWidth={1.4} /><span className="module-visual-label">Идеядан — автоматты жүйеге</span><span className="module-number">03</span></div>
+            <article className="module-card module-card-certificates">
+              <div className="module-visual" aria-hidden="true"><Award size={46} strokeWidth={1.4} /><span className="module-visual-label">Жетістікті атап өтіңіз</span><span className="module-number">03</span></div>
               <div className="module-content">
-                <h3>Автоматтандыру</h3>
-                <p>Автоматтандыру жобасымен танысып, оның қалай жұмыс істейтінін YouTube-та көріңіз.</p>
-                <a className="brand-button" href="https://youtu.be/VJF8I3vDvgo?si=jtned4dcu7_Is8mA" target="_blank" rel="noreferrer">YouTube-та көру <ArrowUpRight size={18} /></a>
+                <h3>Сертификаттар</h3>
+                <p>Оқушыларға арналған сертификат үлгілерінің каталогы.</p>
+                <button type="button" className="brand-button" onClick={() => onSelect('certificates')}>Каталогты ашу <ArrowUpRight size={18} /></button>
               </div>
             </article>
             <article className="module-card module-card-plan">
@@ -52,7 +52,17 @@ export default function WorkspaceHome({ username, onSelect }) {
             </article>
           </div>
         </section>
-        <footer className="workspace-footer"><img src="/infologia-wordmark.png" alt="infoLogia" /><a className="workspace-social-link" href="https://www.instagram.com/infologia.kz/" target="_blank" rel="noreferrer" aria-label="infoLogia Instagram парақшасы"><Instagram size={18} strokeWidth={1.8} /><span>Instagram</span><ArrowUpRight size={14} /></a></footer>
+        <footer className="workspace-footer">
+          <img src="/infologia-wordmark.png" alt="infoLogia" />
+          <div className="workspace-footer-links">
+            <a className="workspace-social-link" href="https://youtu.be/VJF8I3vDvgo?si=jtned4dcu7_Is8mA" target="_blank" rel="noreferrer">
+              <Cpu size={16} strokeWidth={1.8} aria-hidden="true" />Автоматтандыру<ArrowUpRight size={14} aria-hidden="true" />
+            </a>
+            <a className="workspace-social-link" href="https://www.instagram.com/infologia.kz/" target="_blank" rel="noreferrer" aria-label="infoLogia Instagram парақшасы">
+              <Instagram size={18} strokeWidth={1.8} /><span>Instagram</span><ArrowUpRight size={14} />
+            </a>
+          </div>
+        </footer>
       </div>
     </main>
   );

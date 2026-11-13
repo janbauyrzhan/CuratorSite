@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  Plus, Trash2, Download, LogOut, GraduationCap, Users, Clock, Check, User, Shuffle, ChevronDown, RotateCcw
+  Plus, Trash2, Download, LogOut, GraduationCap, Users, Clock, Check, User, Shuffle, ChevronDown, RotateCcw, Award
 } from 'lucide-react';
 import AuthPanel     from './AuthPanel';
 import WorkspaceHome from './WorkspaceHome';
@@ -17,6 +17,7 @@ import Poster        from './Poster';
 import PosterReorder, { PosterLock } from './PosterReorder';
 import ExamScheduler from './ExamScheduler';
 import WeeklyPlanner from './WeeklyPlanner';
+import CertificateCatalog from './CertificateCatalog';
 import {readPlanDrafts,writePlanDraft,mergePlanDrafts,acknowledgePlanDrafts} from '@/lib/planDrafts';
 import PlanSubjects, {PLAN_SUBJECTS} from './PlanSubjects';
 import {
@@ -148,7 +149,7 @@ const DEFAULT_VIEW = { activeTab: 'hub', planSubject: null };
 function readActiveView() {
   try {
     const saved = JSON.parse(window.sessionStorage.getItem(VIEW_STORAGE_KEY));
-    if (!['hub', 'pairs', 'exam', 'plan'].includes(saved?.activeTab)) return DEFAULT_VIEW;
+    if (!['hub', 'pairs', 'exam', 'plan', 'certificates'].includes(saved?.activeTab)) return DEFAULT_VIEW;
     const planSubject = saved.activeTab === 'plan' && PLAN_SUBJECTS.some(subject => subject.id === saved.planSubject)
       ? saved.planSubject
       : null;
@@ -963,6 +964,10 @@ export default function App() {
                   <Clock size={14} /> Сабақ тапсыру
                 </button>
                 <button className="planner-tab" onClick={() => navigate('plan')}>Апталық жоспар</button>
+                <button className="planner-tab certificate-tab" type="button" onClick={() => navigate('certificates')}
+                  aria-current={activeTab === 'certificates' ? 'page' : undefined}>
+                  <Award size={14} aria-hidden="true" /> Сертификаттар
+                </button>
               </div>}
             </div>
           ) : (
@@ -1527,6 +1532,8 @@ export default function App() {
             </div>
           </main>
         </div>
+      ) : activeTab === 'certificates' ? (
+        <CertificateCatalog />
       ) : activeTab === 'plan' ? (
         !['informatics','mathematics','physics'].includes(planSubject) ? <PlanSubjects subject={planSubject} onSelect={selectPlanSubject}/> :
         <WeeklyPlanner userId={user?.id} syncState={syncState} groups={groups} activeGid={activeGid} selectGroup={selectGroup} notify={notify} subject={planSubject}
