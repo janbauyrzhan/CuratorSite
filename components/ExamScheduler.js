@@ -491,19 +491,7 @@ export default function ExamScheduler({
 
       {/* ════ LEFT PANEL: Settings & Group Management ═════════ */}
       <aside className="workspace-sidebar exam-sidebar">
-        <button
-          type="button"
-          className="exam-settings-toggle"
-          aria-expanded={showSettings}
-          aria-controls="exam-settings-fields"
-          onClick={() => setShowSettings(open => !open)}
-        >
-          <CalendarDays size={16} />
-          <span>Кесте баптаулары</span>
-          <ChevronDown size={16} />
-        </button>
-        <div id="exam-settings-fields" className={showSettings ? 'exam-settings-fields is-open' : 'exam-settings-fields'}>
-          {/* 2 · Group Selector */}
+        <div className="exam-sidebar-top">
           <section>
             <FieldLabel>ТАҢДАЛҒАН ТОП</FieldLabel>
             <div style={{ display: 'flex', gap: '6px' }}>
@@ -522,194 +510,24 @@ export default function ExamScheduler({
                   <option key={g.id} value={g.id}>{g.name}{g.subject ? ` — ${g.subject}` : ''}</option>
                 ))}
               </select>
-              <Btn size="sm" variant="ghost" onClick={() => { setActiveTool('groups'); setShowSettings(false); }} aria-label="Топтарды басқару">
-                <FolderOpen size={15} />
-              </Btn>
-            </div>
-
-          </section>
-
-          {/* 3 · Week Name */}
-          <section>
-            <FieldLabel>АПТА АТАУЫ (ПОСТЕРДЕГІ БЕЙДЖ)</FieldLabel>
-            <CleanInput value={examWeek} onChange={e => setExamWeek(e.target.value)} placeholder='Мыс: "1-апта"' />
-          </section>
-
-          {/* 4 · Time and Date Settings (No sticky masks, standard time inputs) */}
-          <section style={{
-            background: '#f8fafc', border: '1.5px solid #e2e8f0',
-            borderRadius: '12px', padding: '14px',
-            display: 'flex', flexDirection: 'column', gap: '12px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
-              <Clock size={15} color={BRAND} />
-              <span style={{ fontSize: '11px', fontWeight: 800, color: '#1f2937', letterSpacing: '.04em' }}>
-                УАҚЫТ ЖӘНЕ КҮНДІ БАПТАУ
-              </span>
-            </div>
-
-            {/* Mode Switcher Toggle */}
-            <div style={{ display: 'flex', background: '#e2e8f0', borderRadius: '8px', padding: '3px', gap: '2px' }}>
-              <button
-                type="button"
-                onClick={() => setScheduleMode('single_day')}
-                style={{
-                  flex: 1, padding: '7px 4px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                  fontSize: '11.5px', fontWeight: 700, transition: 'all .12s',
-                  background: scheduleMode === 'single_day' ? '#fff' : 'transparent',
-                  color: scheduleMode === 'single_day' ? BRAND : '#64748b',
-                  boxShadow: scheduleMode === 'single_day' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                }}
-              >
-                Бір күнде қатарынан
-              </button>
-              <button
-                type="button"
-                onClick={() => setScheduleMode('two_shifts')}
-                style={{
-                  flex: 1, padding: '7px 4px', borderRadius: '6px', border: 'none', cursor: 'pointer',
-                  fontSize: '11.5px', fontWeight: 700, transition: 'all .12s',
-                  background: scheduleMode === 'two_shifts' ? '#fff' : 'transparent',
-                  color: scheduleMode === 'two_shifts' ? BRAND : '#64748b',
-                  boxShadow: scheduleMode === 'two_shifts' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
-                }}
-              >
-                Екі бөлек күн / ауысым
-              </button>
-            </div>
-
-            {/* Date Input(s) */}
-            {scheduleMode === 'single_day' ? (
-              <div>
-                <FieldLabel>ТАПСЫРУ КҮНІ</FieldLabel>
-                <CleanInput value={dateSingle} onChange={e => setDateSingle(e.target.value)} placeholder='Мыс: "15-наурыз"' />
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <div>
-                  <FieldLabel>1-БАҒАНА КҮНІ</FieldLabel>
-                  <CleanInput value={dateCol1} onChange={e => setDateCol1(e.target.value)} placeholder='Мыс: "15-наурыз"' />
-                </div>
-                <div>
-                  <FieldLabel>2-БАҒАНА КҮНІ</FieldLabel>
-                  <CleanInput value={dateCol2} onChange={e => setDateCol2(e.target.value)} placeholder='Мыс: "14-наурыз"' />
-                </div>
-              </div>
-            )}
-
-            {/* Time Input(s) */}
-            {scheduleMode === 'single_day' ? (
-              <div>
-                <FieldLabel>БАСТАЛУ УАҚЫТЫ</FieldLabel>
-                <input
-                  type="time"
-                  value={startTime}
-                  onChange={e => setStartTime(e.target.value)}
-                  style={{
-                    width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '8px',
-                    padding: '8px 11px', fontSize: '14px', fontWeight: 700,
-                    color: '#111827', background: '#fff', outline: 'none',
-                  }}
-                />
-                <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', lineHeight: 1.4 }}>
-                  💡 2-бағана автоматты түрде сағат <strong style={{ color: BRAND }}>{effectiveStartTime2}</strong>-де басталады.
-                </div>
-              </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                <div>
-                  <FieldLabel>1-БАҒАНА БАСТАЛУЫ</FieldLabel>
-                  <input
-                    type="time"
-                    value={startTime}
-                    onChange={e => setStartTime(e.target.value)}
-                    style={{
-                      width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '8px',
-                      padding: '8px 10px', fontSize: '13px', fontWeight: 700,
-                      color: '#111827', background: '#fff', outline: 'none',
-                    }}
-                  />
-                </div>
-                <div>
-                  <FieldLabel>2-БАҒАНА БАСТАЛУЫ</FieldLabel>
-                  <input
-                    type="time"
-                    value={manualStartTime2}
-                    onChange={e => setManualStartTime2(e.target.value)}
-                    style={{
-                      width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '8px',
-                      padding: '8px 10px', fontSize: '13px', fontWeight: 700,
-                      color: '#111827', background: '#fff', outline: 'none',
-                    }}
-                  />
-                </div>
-              </div>
-            )}
-
-            {/* Interval Quick Buttons */}
-            <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
-                <FieldLabel>СТ ҰЗАҚТЫҒЫ (ИНТЕРВАЛ)</FieldLabel>
-                <span style={{ fontSize: '11px', fontWeight: 800, color: BRAND }}>{interval} мин</span>
-              </div>
-              <div style={{ display: 'flex', gap: '6px' }}>
-                {[10, 15, 20].map(m => (
-                  <button
-                    key={m}
-                    type="button"
-                    onClick={() => setInterval(m)}
-                    style={{
-                      flex: 1, padding: '7px', borderRadius: '7px', cursor: 'pointer',
-                      fontSize: '12px', fontWeight: 800,
-                      border: `1.5px solid ${interval === m ? BRAND : '#cbd5e1'}`,
-                      background: interval === m ? BRAND : '#fff',
-                      color: interval === m ? '#fff' : '#475569',
-                      transition: 'all .12s',
-                    }}
-                  >
-                    {m} мин
-                  </button>
-                ))}
-              </div>
             </div>
           </section>
-
-        </div>
-      </aside>
-
-      {/* ════ RIGHT PANEL: Live Canvas SVG Poster ════════════ */}
-      <main className="workspace-main exam-main" style={{
-        flex: 1, overflowY: 'auto', background: '#f1f3ff',
-        padding: '24px', display: 'flex', flexDirection: 'column',
-        gap: '14px', alignItems: 'center',
-      }}>
-
-        <div className="workspace-heading"><h1>Сабақ тапсыру</h1><p>Күн мен уақытты белгілеп, сабақ кестесін дайындаңыз.</p></div>
-
-        <div className="workspace-toolbar exam-toolbar" role="group" aria-label="Кесте әрекеттері">
-          <Btn onClick={handleSave}>
-            <Check size={14} /> {savedAnim ? 'Сақталды ✓' : 'Сақтау'}
-          </Btn>
-          <Btn variant="ghost" onClick={shuffleStudents} disabled={!students.length}>
-            <Shuffle size={14} /> Араластыру
-          </Btn>
-          <Btn variant="success" onClick={downloadPNG}>
-            <Download size={14} /> PNG жүктеу
-          </Btn>
-          <Btn variant="ghost" onClick={copyWhatsApp}>
-            <MessageCircle size={14} /> WhatsApp мәтінін көшіру
-          </Btn>
-          {customOrder && (
-            <Btn variant="ghost" onClick={resetOrder}>
-              <RotateCcw size={14} /> Бастапқы рет
+          <div className="exam-edit-actions" role="group" aria-label="Кесте әрекеттері">
+            <Btn onClick={handleSave}>
+              <Check size={14} /> {savedAnim ? 'Сақталды' : 'Сақтау'}
             </Btn>
-          )}
-        </div>
-
-        <div className="exam-tools">
-          <div className="exam-tool-buttons" role="group" aria-label="Кестенің қосымша әрекеттері">
+            <Btn variant="ghost" onClick={shuffleStudents} disabled={!students.length}>
+              <Shuffle size={14} /> Араластыру
+            </Btn>
+            {customOrder && (
+              <Btn variant="ghost" onClick={resetOrder} title="Бастапқы ретке қайтару" aria-label="Бастапқы ретке қайтару">
+                <RotateCcw size={14} />
+              </Btn>
+            )}
+          </div>
+          <div className="exam-tool-buttons" role="group" aria-label="Кестені өңдеу">
             {[
-              { id: 'students', Icon: Users, label: `Оқушылар тізімі (${students.length})` },
+              { id: 'students', Icon: Users, label: `Оқушылар (${students.length})` },
               { id: 'individual', Icon: Clock, label: individualAppointments.length ? `Жеке уақыт (${individualAppointments.length})` : 'Жеке уақыт' },
               { id: 'swap', Icon: ArrowLeftRight, label: 'Орын ауыстыру' },
               { id: 'groups', Icon: FolderOpen, label: 'Менің топтарым' },
@@ -724,6 +542,173 @@ export default function ExamScheduler({
                 <Icon size={14} /> {label}
               </Btn>
             ))}
+          </div>
+          <button
+            type="button"
+            className={activeTool ? 'exam-settings-toggle has-active-tool' : 'exam-settings-toggle'}
+            aria-expanded={!activeTool && showSettings}
+            aria-controls="exam-settings-fields"
+            onClick={() => {
+              if (activeTool) {
+                setActiveTool(null);
+                setShowSettings(true);
+              } else {
+                setShowSettings(open => !open);
+              }
+            }}
+          >
+            <CalendarDays size={16} />
+            <span>Кесте баптаулары</span>
+            <ChevronDown size={15} />
+          </button>
+        </div>
+        <div className="exam-sidebar-body">
+          <div id="exam-settings-fields" hidden={Boolean(activeTool)} className={showSettings ? 'exam-settings-fields is-open' : 'exam-settings-fields'}>
+            {/* 3 · Week Name */}
+            <section>
+              <FieldLabel>АПТА АТАУЫ (ПОСТЕРДЕГІ БЕЙДЖ)</FieldLabel>
+              <CleanInput value={examWeek} onChange={e => setExamWeek(e.target.value)} placeholder='Мыс: "1-апта"' />
+            </section>
+
+            {/* 4 · Time and Date Settings (No sticky masks, standard time inputs) */}
+            <section style={{
+              background: '#f8fafc', border: '1.5px solid #e2e8f0',
+              borderRadius: '12px', padding: '14px',
+              display: 'flex', flexDirection: 'column', gap: '12px'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                <Clock size={15} color={BRAND} />
+                <span style={{ fontSize: '11px', fontWeight: 800, color: '#1f2937', letterSpacing: '.04em' }}>
+                  УАҚЫТ ЖӘНЕ КҮНДІ БАПТАУ
+                </span>
+              </div>
+
+              {/* Mode Switcher Toggle */}
+              <div style={{ display: 'flex', background: '#e2e8f0', borderRadius: '8px', padding: '3px', gap: '2px' }}>
+                <button
+                  type="button"
+                  onClick={() => setScheduleMode('single_day')}
+                  style={{
+                    flex: 1, padding: '7px 4px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    fontSize: '11.5px', fontWeight: 700, transition: 'all .12s',
+                    background: scheduleMode === 'single_day' ? '#fff' : 'transparent',
+                    color: scheduleMode === 'single_day' ? BRAND : '#64748b',
+                    boxShadow: scheduleMode === 'single_day' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  }}
+                >
+                  Бір күнде қатарынан
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setScheduleMode('two_shifts')}
+                  style={{
+                    flex: 1, padding: '7px 4px', borderRadius: '6px', border: 'none', cursor: 'pointer',
+                    fontSize: '11.5px', fontWeight: 700, transition: 'all .12s',
+                    background: scheduleMode === 'two_shifts' ? '#fff' : 'transparent',
+                    color: scheduleMode === 'two_shifts' ? BRAND : '#64748b',
+                    boxShadow: scheduleMode === 'two_shifts' ? '0 1px 3px rgba(0,0,0,0.08)' : 'none',
+                  }}
+                >
+                  Екі бөлек күн / ауысым
+                </button>
+              </div>
+
+              {/* Date Input(s) */}
+              {scheduleMode === 'single_day' ? (
+                <div>
+                  <FieldLabel>ТАПСЫРУ КҮНІ</FieldLabel>
+                  <CleanInput value={dateSingle} onChange={e => setDateSingle(e.target.value)} placeholder='Мыс: "15-наурыз"' />
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <FieldLabel>1-БАҒАНА КҮНІ</FieldLabel>
+                    <CleanInput value={dateCol1} onChange={e => setDateCol1(e.target.value)} placeholder='Мыс: "15-наурыз"' />
+                  </div>
+                  <div>
+                    <FieldLabel>2-БАҒАНА КҮНІ</FieldLabel>
+                    <CleanInput value={dateCol2} onChange={e => setDateCol2(e.target.value)} placeholder='Мыс: "14-наурыз"' />
+                  </div>
+                </div>
+              )}
+
+              {/* Time Input(s) */}
+              {scheduleMode === 'single_day' ? (
+                <div>
+                  <FieldLabel>БАСТАЛУ УАҚЫТЫ</FieldLabel>
+                  <input
+                    type="time"
+                    value={startTime}
+                    onChange={e => setStartTime(e.target.value)}
+                    style={{
+                      width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '8px',
+                      padding: '8px 11px', fontSize: '14px', fontWeight: 700,
+                      color: '#111827', background: '#fff', outline: 'none',
+                    }}
+                  />
+                  <div style={{ fontSize: '11px', color: '#64748b', marginTop: '6px', lineHeight: 1.4 }}>
+                    💡 2-бағана автоматты түрде сағат <strong style={{ color: BRAND }}>{effectiveStartTime2}</strong>-де басталады.
+                  </div>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
+                  <div>
+                    <FieldLabel>1-БАҒАНА БАСТАЛУЫ</FieldLabel>
+                    <input
+                      type="time"
+                      value={startTime}
+                      onChange={e => setStartTime(e.target.value)}
+                      style={{
+                        width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '8px',
+                        padding: '8px 10px', fontSize: '13px', fontWeight: 700,
+                        color: '#111827', background: '#fff', outline: 'none',
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <FieldLabel>2-БАҒАНА БАСТАЛУЫ</FieldLabel>
+                    <input
+                      type="time"
+                      value={manualStartTime2}
+                      onChange={e => setManualStartTime2(e.target.value)}
+                      style={{
+                        width: '100%', border: '1.5px solid #e2e8f0', borderRadius: '8px',
+                        padding: '8px 10px', fontSize: '13px', fontWeight: 700,
+                        color: '#111827', background: '#fff', outline: 'none',
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              {/* Interval Quick Buttons */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '5px' }}>
+                  <FieldLabel>СТ ҰЗАҚТЫҒЫ (ИНТЕРВАЛ)</FieldLabel>
+                  <span style={{ fontSize: '11px', fontWeight: 800, color: BRAND }}>{interval} мин</span>
+                </div>
+                <div style={{ display: 'flex', gap: '6px' }}>
+                  {[10, 15, 20].map(m => (
+                    <button
+                      key={m}
+                      type="button"
+                      onClick={() => setInterval(m)}
+                      style={{
+                        flex: 1, padding: '7px', borderRadius: '7px', cursor: 'pointer',
+                        fontSize: '12px', fontWeight: 800,
+                        border: `1.5px solid ${interval === m ? BRAND : '#cbd5e1'}`,
+                        background: interval === m ? BRAND : '#fff',
+                        color: interval === m ? '#fff' : '#475569',
+                        transition: 'all .12s',
+                      }}
+                    >
+                      {m} мин
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </section>
+
           </div>
           <div id="exam-tool-panel" className="exam-tool-panel" hidden={!activeTool}>
             {activeTool === 'students' && (
@@ -772,7 +757,7 @@ export default function ExamScheduler({
               </div>
             )}
             {activeTool === 'individual' && (
-              <div className="exam-individual-time">
+              <div>
                 <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>Оқушы негізгі кестеден алынып, постер мен көшірмеде соңына жеке уақытпен қосылады.</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 95px', gap: '6px', marginBottom: '7px' }}>
                   <select value={individualStudentId} onChange={e => setIndividualStudentId(e.target.value)} aria-label="Жеке уақыт қоятын оқушыны таңдаңыз" style={{ minWidth: 0, padding: '8px', borderRadius: '7px', border: '1px solid #d1d5db', background: '#fff', fontSize: '12px' }}>
@@ -882,7 +867,7 @@ export default function ExamScheduler({
                     <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Екі оқушыны таңдаңыз — кестедегі орындары ауысады.</div>
                   </div>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 220px), 1fr))', gap: '10px', alignItems: 'end' }}>
+                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '10px', alignItems: 'end' }}>
                   <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>1-ОҚУШЫ
                     <select value={swapStudentA} onChange={e => setSwapStudentA(e.target.value)} style={{ display: 'block', marginTop: '5px', width: '100%', padding: '9px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#fff', fontSize: '13px', color: '#334155' }}>
                       <option value="">-- Бірінші оқушыны таңдаңыз --</option>
@@ -907,10 +892,29 @@ export default function ExamScheduler({
             )}
           </div>
         </div>
+      </aside>
+
+      {/* ════ RIGHT PANEL: Live Canvas SVG Poster ════════════ */}
+      <main className="workspace-main exam-main" style={{
+        flex: 1, overflowY: 'auto', background: '#f1f3ff',
+        padding: '24px', display: 'flex', flexDirection: 'column',
+        gap: '14px', alignItems: 'center',
+      }}>
+
+        <div className="workspace-heading exam-preview-header">
+          <h1>Сабақ тапсыру</h1>
+          <div className="workspace-toolbar exam-export-actions" role="group" aria-label="Кестені бөлісу">
+            <Btn variant="success" onClick={downloadPNG}>
+              <Download size={14} /> PNG жүктеу
+            </Btn>
+            <Btn variant="ghost" onClick={copyWhatsApp}>
+              <MessageCircle size={14} /> WhatsApp мәтінін көшіру
+            </Btn>
+          </div>
+        </div>
 
         {/* Live SVG Poster 2 */}
         <div style={{ width: '100%', maxWidth: '1060px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', width: '100%' }}>Оқушының орнын бекіту үшін жанындағы 🔓 белгісін басыңыз. Белгілер тек осы жерде көрінеді және PNG файлына түспейді.</div>
           <div
             style={{ position: 'relative', width: '100%' }}
           >
@@ -929,6 +933,7 @@ export default function ExamScheduler({
             {seatLockControls}
           </div>
           </div>
+          <div style={{ fontSize: '12px', color: '#64748b', width: '100%' }}>Оқушының орнын бекіту үшін жанындағы 🔓 белгісін басыңыз. Белгілер тек осы жерде көрінеді және PNG файлына түспейді.</div>
         </div>
       </main>
     </div>
