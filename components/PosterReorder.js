@@ -20,7 +20,7 @@ export default function PosterReorder({ rows, onSwap, onLocked, children, locks 
   const [selected, setSelected] = useState(null);
   const [drag, setDrag] = useState(null);
   const [showPreview, setShowPreview] = useState(false);
-  const items = rows.flatMap(row => row.students);
+  const items = rows.flatMap(row => row.students).filter(item => !item.readOnly);
 
   useEffect(() => () => cancelAnimationFrame(scrollFrame.current), []);
 
@@ -136,9 +136,11 @@ export default function PosterReorder({ rows, onSwap, onLocked, children, locks 
               <div className="poster-touch-students">
                 {row.students.map(item => (
                   <div className="poster-touch-student" key={item.id}>
-                    <button type="button" className="poster-student-name" {...inputProps(item, false)}>{item.name}</button>
+                    {item.readOnly
+                      ? <span className="poster-student-name">{item.name}</span>
+                      : <button type="button" className="poster-student-name" {...inputProps(item, false)}>{item.name}</button>}
                     {item.lock && <PosterLock {...item.lock} />}
-                    {!item.locked && (
+                    {!item.readOnly && !item.locked && (
                       <button type="button" className="poster-grip" {...inputProps(item)}
                         aria-label={`${item.name}: жылжыту`} tabIndex={-1}>
                         <GripVertical size={17} />

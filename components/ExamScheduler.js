@@ -232,10 +232,27 @@ export default function ExamScheduler({
     return slotOverrides.map(slot => slot.map(student => roster.get(student.id)));
   }, [slots, slotOverrides, students]);
 
-  const effectiveSlots = useMemo(() => {
-    const individualIds = new Set(individualAppointments.map(({ student }) => student.id));
-    return arrangedSlots.map(slot => slot.filter(student => !individualIds.has(student.id)));
-  }, [arrangedSlots, individualAppointments]);
+  const individualIds = useMemo(() => new Set(individualAppointments.map(({ student }) => student.id)), [individualAppointments]);
+
+  const displayOrder = useMemo(() => {
+    if (!individualIds.size) return arrangedSlots;
+    function packSlots(slotsToPack) {
+      const order = slotsToPack.flat();
+      const isFixed = student => Object.hasOwn(lockedSeats, student.id) && !individualIds.has(student.id);
+      const movable = order.filter(student => !isFixed(student) && !individualIds.has(student.id));
+      movable.push(...order.filter(student => individualIds.has(student.id)));
+
+      let index = 0;
+      const packed = order.map(student => isFixed(student) ? student : movable[index++]);
+      return slotsToPack.map((_, slot) => packed.slice(slot * 2, slot * 2 + 2));
+    }
+    if (scheduleMode === 'single_day') return packSlots(arrangedSlots);
+    return [...packSlots(arrangedSlots.slice(0, 8)), ...packSlots(arrangedSlots.slice(8))];
+  }, [arrangedSlots, individualIds, lockedSeats, scheduleMode]);
+
+  const effectiveSlots = useMemo(() => displayOrder.map(
+    slot => slot.filter(student => !individualIds.has(student.id))
+  ), [displayOrder, individualIds]);
 
   /* ── Real-Time Dynamic SVG 2 Generation ─────────────────── */
   const filledSvg2 = useMemo(() => {
@@ -248,8 +265,9 @@ export default function ExamScheduler({
       intervalMinutes: interval,
       slots: effectiveSlots,
       individualAppointments,
+      fitIndividualAppointments: scheduleMode === 'single_day',
     });
-  }, [svgTemplate2, examWeek, effectiveDate1, effectiveDate2, startTime, effectiveStartTime2, interval, effectiveSlots, individualAppointments]);
+  }, [svgTemplate2, examWeek, effectiveDate1, effectiveDate2, startTime, effectiveStartTime2, interval, effectiveSlots, individualAppointments, scheduleMode]);
 
   /* ── Shuffle Action ─────────────────────────────────────── */
   const shuffleStudents = useCallback(() => {
@@ -287,8 +305,10 @@ export default function ExamScheduler({
       if (occupant) delete next[occupant];
       next[studentId] = seatIndex;
     }
+    const nextOrder = Object.hasOwn(next, studentId) && displayOrder !== arrangedSlots ? displayOrder : slotOverrides;
     setLockedSeats(next);
-    onSaveGroup?.({ ...(activeGroup?.examSettings || {}), lockedSeats: next, customOrder, slotOverrides });
+    setSlotOverrides(nextOrder);
+    onSaveGroup?.({ lockedSeats: next, slotOverrides: nextOrder });
   }
 
   function saveIndividualTime(studentKey, time) {
@@ -324,7 +344,7 @@ export default function ExamScheduler({
     const second = effectiveSlots.flat().find(student => student.id === secondId);
     if (!first || !second || firstId === secondId) return;
 
-    const next = arrangedSlots.map(slot => slot.map(student => {
+    const next = displayOrder.map(slot => slot.map(student => {
       if (student.id === firstId) return second;
       if (student.id === secondId) return first;
       return student;
@@ -379,7 +399,7 @@ export default function ExamScheduler({
       label: `${left ? effectiveDate1 : effectiveDate2} · ${start}–${addMinutesToTime(start, interval)}`,
       students: slot.map((student, studentIndex) => {
         const y = SLOT_NAME_Y[row][studentIndex === 0 ? 'y1' : 'y2'];
-        const seatIndex = slotIndex * 2 + arrangedSlots[slotIndex].findIndex(item => item.id === student.id);
+        const seatIndex = slotIndex * 2 + displayOrder[slotIndex].findIndex(item => item.id === student.id);
         const locked = Object.hasOwn(lockedSeats, student.id);
         return {
           id: student.id,
@@ -401,8 +421,13 @@ export default function ExamScheduler({
       }),
     }];
   });
+  posterRows.push(...individualAppointments.map(({ student, time }) => ({
+    key: `individual-${student.id}`,
+    label: `Жеке уақыт · ${time}–${addMinutesToTime(time, interval)}`,
+    students: [{ id: student.id, name: student.name, readOnly: true }],
+  })));
   const seatLockControls = posterRows.flatMap(row => row.students.map(student => (
-    <PosterLock key={student.id} {...student.lock} />
+    student.lock && <PosterLock key={student.id} {...student.lock} />
   )));
 
   /* ──────────────────────────────────────────────────────────── */
