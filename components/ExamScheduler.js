@@ -11,7 +11,7 @@ import {
   CalendarDays, ChevronDown, FolderOpen, Users, RotateCcw,
 } from 'lucide-react';
 import {
-  fillSvgTemplate2, downloadSvg2AsPng, addMinutesToTime, RAW_SVG_TEMPLATE2, SLOT_NAME_Y,
+  fillSvgTemplate2, downloadSvg2AsPng, addMinutesToTime, groupIndividualAppointments, RAW_SVG_TEMPLATE2, SLOT_NAME_Y,
 } from '@/lib/svgTemplate2';
 import { cleanStudentName } from '@/lib/utils';
 import PosterReorder, { PosterLock } from './PosterReorder';
@@ -23,6 +23,21 @@ function examStudentRuleKey(student, roster) {
   const studentIndex = roster.findIndex(item => item.id === student?.id);
   const sameNameBefore = roster.slice(0, Math.max(0, studentIndex)).filter(item => cleanStudentName(item.name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase() === normalizedName).length;
   return `${normalizedName}::${sameNameBefore + 1}`;
+}
+
+function packExamSlots(slots, individualIds, lockedSeats, closeAllGaps = false) {
+  const order = slots.flat();
+  const regular = order.filter(student => !individualIds.has(student.id));
+  const individual = order.filter(student => individualIds.has(student.id));
+  const fixed = order.map((student, index) => (
+    Object.hasOwn(lockedSeats, student.id) && !individualIds.has(student.id) &&
+    (!closeAllGaps || index < regular.length) ? student : null
+  ));
+  const fixedIds = new Set(fixed.filter(Boolean).map(student => student.id));
+  const movable = [...regular.filter(student => !fixedIds.has(student.id)), ...individual];
+  let index = 0;
+  const packed = fixed.map(student => student || movable[index++]);
+  return slots.map((_, slot) => packed.slice(slot * 2, slot * 2 + 2));
 }
 
 const DEMO_EXAM_STUDENTS = `Болатұлы Нұрдәулет
@@ -236,16 +251,7 @@ export default function ExamScheduler({
 
   const displayOrder = useMemo(() => {
     if (!individualIds.size) return arrangedSlots;
-    function packSlots(slotsToPack) {
-      const order = slotsToPack.flat();
-      const isFixed = student => Object.hasOwn(lockedSeats, student.id) && !individualIds.has(student.id);
-      const movable = order.filter(student => !isFixed(student) && !individualIds.has(student.id));
-      movable.push(...order.filter(student => individualIds.has(student.id)));
-
-      let index = 0;
-      const packed = order.map(student => isFixed(student) ? student : movable[index++]);
-      return slotsToPack.map((_, slot) => packed.slice(slot * 2, slot * 2 + 2));
-    }
+    const packSlots = slots => packExamSlots(slots, individualIds, lockedSeats);
     if (scheduleMode === 'single_day') return packSlots(arrangedSlots);
     return [...packSlots(arrangedSlots.slice(0, 8)), ...packSlots(arrangedSlots.slice(8))];
   }, [arrangedSlots, individualIds, lockedSeats, scheduleMode]);
@@ -253,6 +259,37 @@ export default function ExamScheduler({
   const effectiveSlots = useMemo(() => displayOrder.map(
     slot => slot.filter(student => !individualIds.has(student.id))
   ), [displayOrder, individualIds]);
+
+  function hasGap(slots) {
+    const order = slots.flat();
+    const lastRegular = order.findLastIndex(student => !individualIds.has(student.id));
+    return order.slice(0, lastRegular).some(student => individualIds.has(student.id));
+  }
+  const hasPinnedGaps = scheduleMode === 'single_day'
+    ? hasGap(displayOrder)
+    : hasGap(displayOrder.slice(0, 8)) || hasGap(displayOrder.slice(8));
+
+  function fillPinnedGaps() {
+    const pack = slots => packExamSlots(slots, individualIds, lockedSeats, true);
+    const next = scheduleMode === 'single_day'
+      ? pack(displayOrder)
+      : [...pack(displayOrder.slice(0, 8)), ...pack(displayOrder.slice(8))];
+    const nextLocks = { ...lockedSeats };
+    const occupied = new Set();
+    next.forEach((slot, row) => slot.forEach((student, seat) => {
+      if (!individualIds.has(student.id) && Object.hasOwn(nextLocks, student.id)) {
+        const position = row * 2 + seat;
+        nextLocks[student.id] = position;
+        occupied.add(position);
+      }
+    }));
+    for (const id of individualIds) {
+      if (occupied.has(Number(nextLocks[id]))) delete nextLocks[id];
+    }
+    setLockedSeats(nextLocks);
+    setSlotOverrides(next);
+    onSaveGroup?.({ lockedSeats: nextLocks, slotOverrides: next });
+  }
 
   /* ── Real-Time Dynamic SVG 2 Generation ─────────────────── */
   const filledSvg2 = useMemo(() => {
@@ -421,10 +458,10 @@ export default function ExamScheduler({
       }),
     }];
   });
-  posterRows.push(...individualAppointments.map(({ student, time }) => ({
-    key: `individual-${student.id}`,
+  posterRows.push(...groupIndividualAppointments(individualAppointments).map(({ students, time }) => ({
+    key: `individual-${time}`,
     label: `Жеке уақыт · ${time}–${addMinutesToTime(time, interval)}`,
-    students: [{ id: student.id, name: student.name, readOnly: true }],
+    students: students.map(student => ({ id: student.id, name: student.name, readOnly: true })),
   })));
   const seatLockControls = posterRows.flatMap(row => row.students.map(student => (
     student.lock && <PosterLock key={student.id} {...student.lock} />
@@ -824,6 +861,12 @@ export default function ExamScheduler({
 
         <div className="poster-workspace">
           <p className="poster-instructions">Оқушыны басқа оқушының орнына сүйреңіз немесе екі есімді кезекпен басыңыз. 🔓 арқылы орынды бекітіңіз. Құлыптар PNG файлында көрінбейді.</p>
+          {hasPinnedGaps && (
+            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px', marginBottom: '10px' }}>
+              <Btn variant="ghost" size="sm" onClick={fillPinnedGaps}>Бос орындарды толтыру</Btn>
+              <span style={{ color: '#5d6875', fontSize: '12px' }}>Кейбір бекітілген оқушылар бос орындарға ауысады.</span>
+            </div>
+          )}
           <PosterReorder key={activeGid} rows={posterRows} onSwap={swapStudents} onLocked={notifyLocked} locks={seatLockControls}>
             <div id="poster-export-exam" className="exam-poster-image" dangerouslySetInnerHTML={{ __html: filledSvg2 }} />
           </PosterReorder>
