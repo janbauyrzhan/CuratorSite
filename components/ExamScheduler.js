@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Download, Shuffle, Clock, Plus, Trash2, Check, MessageCircle,
+  Download, Shuffle, Clock, Plus, Trash2, Check,
   CalendarDays, ChevronDown, FolderOpen, Users, RotateCcw,
 } from 'lucide-react';
 import {
@@ -350,73 +350,6 @@ export default function ExamScheduler({
     }
   }
 
-  /* ── WhatsApp Text Copy ─────────────────────────────────── */
-  const copyWhatsApp = useCallback(() => {
-    if (!students || students.length === 0) {
-      notify('Оқушылар тізімі бос');
-      return;
-    }
-    const cleanWeek = (examWeek || '1-АПТА').toUpperCase();
-    const groupTitle = activeGroup?.name ? activeGroup.name : 'Топ';
-    const subjTitle = activeGroup?.subject ? ` (${activeGroup.subject})` : '';
-
-    let text = `📅 ${cleanWeek} • САБАҚ ТАПСЫРУ КЕСТЕСІ\n👥 Топ: ${groupTitle}${subjTitle}\n`;
-
-    if (scheduleMode === 'single_day') {
-      text += `\n📍 ${effectiveDate1}:\n`;
-      let hasAny = false;
-      for (let i = 0; i < 16; i++) {
-        const slotData = effectiveSlots[i] || [];
-        if (slotData.length === 0) continue;
-        hasAny = true;
-        const sStart = i < 8
-          ? addMinutesToTime(startTime, i * interval)
-          : addMinutesToTime(effectiveStartTime2, (i - 8) * interval);
-        const sEnd = addMinutesToTime(sStart, interval);
-        const names = slotData.map(s => s.name).join(', ');
-        text += `• ${sStart} - ${sEnd}: ${names}\n`;
-      }
-      if (!hasAny) text += `(бос)\n`;
-    } else {
-      text += `\n📍 ${effectiveDate1} (1-бағана):\n`;
-      let col1Has = false;
-      for (let i = 0; i < 8; i++) {
-        const slotData = effectiveSlots[i] || [];
-        if (slotData.length === 0) continue;
-        col1Has = true;
-        const sStart = addMinutesToTime(startTime, i * interval);
-        const sEnd = addMinutesToTime(sStart, interval);
-        const names = slotData.map(s => s.name).join(', ');
-        text += `• ${sStart} - ${sEnd}: ${names}\n`;
-      }
-      if (!col1Has) text += `(бос)\n`;
-
-      text += `\n📍 ${effectiveDate2} (2-бағана):\n`;
-      let col2Has = false;
-      for (let i = 8; i < 16; i++) {
-        const slotData = effectiveSlots[i] || [];
-        if (slotData.length === 0) continue;
-        col2Has = true;
-        const sStart = addMinutesToTime(effectiveStartTime2, (i - 8) * interval);
-        const sEnd = addMinutesToTime(sStart, interval);
-        const names = slotData.map(s => s.name).join(', ');
-        text += `• ${sStart} - ${sEnd}: ${names}\n`;
-      }
-      if (!col2Has) text += `(бос)\n`;
-    }
-
-    if (individualAppointments.length) {
-      text += '\n\n⏰ ЖЕКЕ УАҚЫТ (НЕГІЗГІ КЕСТЕДЕН КЕЙІН):\n';
-      individualAppointments.forEach(({ student, time }) => {
-        text += `• ${time} - ${addMinutesToTime(time, interval)}: ${student.name}\n`;
-      });
-    }
-
-    navigator.clipboard.writeText(text.trim())
-      .then(() => notify('WhatsApp мәтіні көшірілді! ✓'))
-      .catch(() => notify('Көшіру мүмкін болмады'));
-  }, [students, examWeek, activeGroup, scheduleMode, effectiveDate1, effectiveDate2, startTime, effectiveStartTime2, interval, effectiveSlots, individualAppointments, notify]);
-
   /* ── Save Current Settings ──────────────────────────────── */
   function handleSave() {
     onSaveGroup?.({
@@ -744,7 +677,7 @@ export default function ExamScheduler({
             )}
             {activeTool === 'individual' && (
               <div>
-                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>Оқушы негізгі кестеден алынып, постер мен көшірмеде соңына жеке уақытпен қосылады.</div>
+                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>Жеке уақыт тағайындалған оқушы постердің соңында көрсетіледі.</div>
                 <div style={{ display: 'grid', gridTemplateColumns: '1fr 95px', gap: '6px', marginBottom: '7px' }}>
                   <select value={individualStudentId} onChange={e => setIndividualStudentId(e.target.value)} aria-label="Жеке уақыт қоятын оқушыны таңдаңыз" style={{ minWidth: 0, padding: '8px', borderRadius: '7px', border: '1px solid #d1d5db', background: '#fff', fontSize: '12px' }}>
                     <option value="">Оқушыны таңдаңыз</option>
@@ -857,12 +790,9 @@ export default function ExamScheduler({
 
         <div className="workspace-heading exam-preview-header">
           <h1>Сабақ тапсыру</h1>
-          <div className="workspace-toolbar exam-export-actions" role="group" aria-label="Кестені бөлісу">
+          <div className="workspace-toolbar exam-export-actions">
             <Btn variant="success" onClick={downloadPNG}>
               <Download size={14} /> PNG жүктеу
-            </Btn>
-            <Btn variant="ghost" onClick={copyWhatsApp}>
-              <MessageCircle size={14} /> WhatsApp мәтінін көшіру
             </Btn>
           </div>
         </div>

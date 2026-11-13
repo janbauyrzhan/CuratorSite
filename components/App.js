@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  Plus, Trash2, Download, Copy, LogOut, GraduationCap, Users, Clock, Check, User, Shuffle, MessageCircle, ChevronDown, RotateCcw
+  Plus, Trash2, Download, LogOut, GraduationCap, Users, Clock, Check, User, Shuffle, ChevronDown, RotateCcw
 } from 'lucide-react';
 import AuthPanel     from './AuthPanel';
 import WorkspaceHome from './WorkspaceHome';
@@ -23,7 +23,6 @@ import {
   uid, makeSchedule, makeGenderedSchedule,
   parseStudents, normalizeText, normalizeGender,
   getLegacyWorkspaces, clearLegacyCredentials,
-  pairsToTSV,
 } from '@/lib/utils';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import {
@@ -143,6 +142,22 @@ function Toast({ msg, onHide }) {
   );
 }
 
+const VIEW_STORAGE_KEY = 'infologia-active-view';
+const DEFAULT_VIEW = { activeTab: 'hub', planSubject: null };
+
+function readActiveView() {
+  try {
+    const saved = JSON.parse(window.sessionStorage.getItem(VIEW_STORAGE_KEY));
+    if (!['hub', 'pairs', 'exam', 'plan'].includes(saved?.activeTab)) return DEFAULT_VIEW;
+    const planSubject = saved.activeTab === 'plan' && PLAN_SUBJECTS.some(subject => subject.id === saved.planSubject)
+      ? saved.planSubject
+      : null;
+    return { activeTab: saved.activeTab, planSubject };
+  } catch {
+    return DEFAULT_VIEW;
+  }
+}
+
 /* ══════════════════════════════════════════════════════════════
    MAIN APP COMPONENT
    ══════════════════════════════════════════════════════════════ */
@@ -166,8 +181,21 @@ export default function App() {
   const supabase = useMemo(() => getSupabaseClient(), []);
 
   /* ── Tab Switcher State ('hub' | 'pairs' | 'exam') ──────────────── */
-  const [activeTab, setActiveTab] = useState('hub');
-  const [planSubject, setPlanSubject] = useState(null);
+  const [{ activeTab, planSubject }, setActiveView] = useState(readActiveView);
+
+  function navigate(tab, subject = null) {
+    const view = { activeTab: tab, planSubject: subject };
+    setActiveView(view);
+    try {
+      window.sessionStorage.setItem(VIEW_STORAGE_KEY, JSON.stringify(view));
+    } catch {
+      // Navigation still works if browser storage is unavailable.
+    }
+  }
+
+  function selectPlanSubject(subject) {
+    navigate('plan', subject);
+  }
   const [showStudentList, setShowStudentList] = useState(false);
 
   /* ── Group State (Strictly isolated per username) ───────── */
@@ -785,50 +813,10 @@ export default function App() {
     }
   }
 
-  function copyTSV() {
-    if (!currentPairs.length) {
-      notify('Көшіретін жұптар жоқ');
-      return;
-    }
-    // Strict TSV: {Имя1}\t{Телефон1}\t{Имя2}\t{Телефон2}
-    // For odd lone student: {Имя}\t{Телефон}\t\t
-    navigator.clipboard.writeText(pairsToTSV(currentPairs))
-      .then(() => notify('Excel немесе Google Sheets үшін көшірілді! (Ctrl+V → 4 бағана)'))
-      .catch(() => notify('Көшіру қатесі орын алды'));
-  }
-
-  function copyWhatsApp() {
-    if (!currentPairs.length) {
-      notify('Көшіретін жұптар жоқ');
-      return;
-    }
-    const cleanWeek = (weekText || `${safeWeek + 1}-АПТА`).toUpperCase();
-    const groupTitle = activeGroup?.name ? activeGroup.name : 'Топ';
-    const subjTitle = activeGroup?.subject ? activeGroup.subject : 'Жұптық жұмыс';
-
-    let text = `📢 ${cleanWeek} • ЖҰПТЫҚ ЖҰМЫС (${subjTitle})\n👥 Топ: ${groupTitle}\n\n`;
-
-    let count = 1;
-    currentPairs.forEach((pair) => {
-      if (!pair || pair.length === 0) return;
-      if (pair.length === 1) {
-        text += `${count}. ${pair[0].name}\n`;
-      } else {
-        text += `${count}. ${pair[0].name} — ${pair[1].name}\n`;
-      }
-      count++;
-    });
-
-    navigator.clipboard.writeText(text.trim())
-      .then(() => notify('WhatsApp мәтіні көшірілді! ✓'))
-      .catch(() => notify('Көшіру қатесі орын алды'));
-  }
-
   /* ══ AUTH HANDLERS ══════════════════════════════════════════ */
   function handleAuth(authUser) {
     if (!authUser) return;
     setUser({ id: authUser.id, email: authUser.email, username: authUser.email?.split('@')[0] || 'Куратор' });
-    setActiveTab('hub');
   }
 
   async function importLocalWorkspace() {
@@ -867,6 +855,7 @@ export default function App() {
 
   async function logout() {
     if (supabase) await supabase.auth.signOut();
+    navigate('hub');
     setNewName('');
     setNewSubject('');
     setShowNewGroup(false);
@@ -916,9 +905,9 @@ export default function App() {
         {/* Brand & Navigation */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }} className="app-header-left">
           <div
-            onClick={() => setActiveTab('hub')}
+            onClick={() => navigate('hub')}
             style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer' }}
-            className="app-brand" role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); setActiveTab('hub'); } }}
+            className="app-brand" role="button" tabIndex={0} onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); navigate('hub'); } }}
             title="Басты мәзірге өту"
           >
             <img src="/infologia-wordmark.png" alt="infoLogia — Кураторлардың жұмыс кабинеті" className="app-brand-logo" />
@@ -930,7 +919,7 @@ export default function App() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }} className="app-nav">
               <button
                 type="button"
-                onClick={() => setActiveTab('hub')}
+                onClick={() => navigate('hub')}
                 style={{
                   padding: '6px 12px', borderRadius: '8px',
                   border: '1.5px solid #e2e8f0', background: '#ffffff',
@@ -944,9 +933,9 @@ export default function App() {
                 ← Басты мәзірге
               </button>
 
-              {activeTab === 'plan' ? <nav className="app-tabs plan-subject-nav" aria-label="Жоспар пәндері"><button className="planner-tab" aria-current={!planSubject?'page':undefined} onClick={()=>setPlanSubject(null)}>Барлық пәндер</button>{PLAN_SUBJECTS.map(subject=><button key={subject.id} className="planner-tab" aria-current={planSubject===subject.id?'page':undefined} onClick={()=>setPlanSubject(subject.id)}>{subject.name}</button>)}</nav> : <div className="app-tabs" style={{ display: 'flex', background: '#eff0ff', borderRadius: '10px', padding: '3px', gap: '3px' }}>
+              {activeTab === 'plan' ? <nav className="app-tabs plan-subject-nav" aria-label="Жоспар пәндері"><button className="planner-tab" aria-current={!planSubject?'page':undefined} onClick={()=>selectPlanSubject(null)}>Барлық пәндер</button>{PLAN_SUBJECTS.map(subject=><button key={subject.id} className="planner-tab" aria-current={planSubject===subject.id?'page':undefined} onClick={()=>selectPlanSubject(subject.id)}>{subject.name}</button>)}</nav> : <div className="app-tabs" style={{ display: 'flex', background: '#eff0ff', borderRadius: '10px', padding: '3px', gap: '3px' }}>
                 <button
-                  onClick={() => setActiveTab('pairs')}
+                  onClick={() => navigate('pairs')}
                   aria-current={activeTab === 'pairs' ? 'page' : undefined}
                   style={{
                     padding: '6px 16px', borderRadius: '7px', border: 'none', cursor: 'pointer',
@@ -960,7 +949,7 @@ export default function App() {
                   <Users size={14} /> Жұптық жұмыс
                 </button>
                 <button
-                  onClick={() => setActiveTab('exam')}
+                  onClick={() => navigate('exam')}
                   aria-current={activeTab === 'exam' ? 'page' : undefined}
                   style={{
                     padding: '6px 16px', borderRadius: '7px', border: 'none', cursor: 'pointer',
@@ -973,7 +962,7 @@ export default function App() {
                 >
                   <Clock size={14} /> Сабақ тапсыру
                 </button>
-                <button className="planner-tab" onClick={() => {setPlanSubject(null);setActiveTab('plan');}}>Апталық жоспар</button>
+                <button className="planner-tab" onClick={() => navigate('plan')}>Апталық жоспар</button>
               </div>}
             </div>
           ) : (
@@ -1021,7 +1010,7 @@ export default function App() {
 
       {/* ══ WORKSPACE CONTENT: HUB vs TAB 1 vs TAB 2 ════════════ */}
       {activeTab === 'hub' ? (
-        <WorkspaceHome username={user?.username} onSelect={tab=>{if(tab==='plan')setPlanSubject(null);setActiveTab(tab);}} />
+        <WorkspaceHome username={user?.username} onSelect={navigate} />
       ) : activeTab === 'pairs' ? (
         /* ════ TAB 1: «ЖҰПТЫҚ ЖҰМЫС» PAIRS GENERATOR ═══════════ */
         <div className="pair-workspace pairs-layout" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -1450,7 +1439,7 @@ export default function App() {
             gap: '14px', alignItems: 'center',
           }}>
 
-            <div className="workspace-heading"><h1>Жұптық жұмыс</h1><p>Жұптарды реттеп, дайын постермен бөлісіңіз.</p></div>
+            <div className="workspace-heading"><h1>Жұптық жұмыс</h1></div>
 
             {/* Onboarding block for colleagues when list or group is empty */}
             {(!activeGid || !rawTextPairs.trim() || studentsPairs.length === 0) && (
@@ -1490,16 +1479,6 @@ export default function App() {
               {/* 1. Download PNG (Green) */}
               <Btn variant="success" onClick={downloadPNG}>
                 <Download size={14} />Суретті жүктеу (PNG)
-              </Btn>
-
-              {/* 2. Copy WhatsApp text */}
-              <Btn variant="ghost" onClick={copyWhatsApp}>
-                <MessageCircle size={14} />WhatsApp мәтінін көшіру
-              </Btn>
-
-              {/* 3. Copy TSV for Excel (White) */}
-              <Btn variant="ghost" onClick={copyTSV}>
-                <Copy size={14} />Тізімді көшіру (Excel)
               </Btn>
 
               {weekOverride && (
@@ -1549,7 +1528,7 @@ export default function App() {
           </main>
         </div>
       ) : activeTab === 'plan' ? (
-        !['informatics','mathematics','physics'].includes(planSubject) ? <PlanSubjects subject={planSubject} onSelect={setPlanSubject}/> :
+        !['informatics','mathematics','physics'].includes(planSubject) ? <PlanSubjects subject={planSubject} onSelect={selectPlanSubject}/> :
         <WeeklyPlanner userId={user?.id} syncState={syncState} groups={groups} activeGid={activeGid} selectGroup={selectGroup} notify={notify} subject={planSubject}
           onChange={(gid, week, plan, subject=planSubject) => {try{writePlanDraft(user.id,gid,week,plan,subject);}catch{notify('Құрылғыға сақтау мүмкін болмады. Cloud сақталуын күтіңіз.');}setGroups(current => current.map(g => g.id === gid ? {
             ...g, weeklyPlans: {...g.weeklyPlans, [subject]: {...g.weeklyPlans?.[subject], [week]: plan}},
