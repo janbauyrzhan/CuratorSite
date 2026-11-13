@@ -16,6 +16,13 @@ import { cleanStudentName } from '@/lib/utils';
 
 const BRAND = '#514fb1';
 
+function examStudentRuleKey(student, roster) {
+  const normalizedName = cleanStudentName(student?.name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase();
+  const studentIndex = roster.findIndex(item => item.id === student?.id);
+  const sameNameBefore = roster.slice(0, Math.max(0, studentIndex)).filter(item => cleanStudentName(item.name || '').trim().replace(/\s+/g, ' ').toLocaleLowerCase() === normalizedName).length;
+  return `${normalizedName}::${sameNameBefore + 1}`;
+}
+
 const DEMO_EXAM_STUDENTS = `Болатұлы Нұрдәулет
 Еркинжан Каусар
 Асқарұлы Дамир
@@ -145,11 +152,15 @@ export default function ExamScheduler({
   const [swapStudentB, setSwapStudentB]         = useState('');
   const [slotOverrides, setSlotOverrides]       = useState(null);
   const [lockedSeats, setLockedSeats] = useState(activeGroup?.examSettings?.lockedSeats || {});
+  const [individualTimes, setIndividualTimes] = useState(activeGroup?.examSettings?.individualTimes || {});
+  const [individualStudentId, setIndividualStudentId] = useState('');
+  const [individualTimeDraft, setIndividualTimeDraft] = useState('18:00');
 
   useEffect(() => {
     setSlotOverrides(activeGroup?.examSettings?.slotOverrides || null);
     setLockedSeats(activeGroup?.examSettings?.lockedSeats || {});
     setCustomOrder(activeGroup?.examSettings?.customOrder || null);
+    setIndividualTimes(activeGroup?.examSettings?.individualTimes || {});
     setSwapStudentA('');
     setSwapStudentB('');
   }, [activeGroup?.id]);
@@ -164,6 +175,10 @@ export default function ExamScheduler({
 
   const effectiveDate1 = scheduleMode === 'single_day' ? dateSingle : dateCol1;
   const effectiveDate2 = scheduleMode === 'single_day' ? dateSingle : dateCol2;
+  const individualAppointments = useMemo(() => Object.entries(individualTimes || {})
+    .map(([key, time]) => ({ student: students.find(s => examStudentRuleKey(s, students) === key), time }))
+    .filter(item => item.student && item.time)
+    .sort((a, b) => a.time.localeCompare(b.time) || a.student.name.localeCompare(b.student.name)), [individualTimes, students]);
 
   /* ── SVG Template 2 ─────────────────────────────────────── */
   const [svgTemplate2, setSvgTemplate2] = useState(RAW_SVG_TEMPLATE2);
@@ -203,17 +218,19 @@ export default function ExamScheduler({
     for (let i = 0; i < 16; i++) {
       const s1 = arranged[i * 2] || null;
       const s2 = arranged[i * 2 + 1] || null;
-      const pair = [s1, s2].filter(Boolean);
+      const individualIds = new Set(Object.keys(individualTimes || {}));
+      const pair = [s1, s2].filter(s => s && !individualIds.has(examStudentRuleKey(s, students)));
       res.push(pair);
     }
     return res;
-  }, [students, customOrder, lockedSeats]);
+  }, [students, customOrder, lockedSeats, individualTimes]);
 
   /* ── Effective Slots (with manual overrides applied) ────── */
   const effectiveSlots = useMemo(() => {
     if (!slotOverrides || slotOverrides.length === 0) return slots;
-    return slotOverrides;
-  }, [slots, slotOverrides]);
+    const individualIds = new Set(Object.keys(individualTimes || {}));
+    return slotOverrides.map(slot => slot.filter(student => !individualIds.has(examStudentRuleKey(student, students))));
+  }, [slots, slotOverrides, individualTimes, students]);
 
   /* ── Real-Time Dynamic SVG 2 Generation ─────────────────── */
   const filledSvg2 = useMemo(() => {
@@ -225,8 +242,9 @@ export default function ExamScheduler({
       startTime2: effectiveStartTime2,
       intervalMinutes: interval,
       slots: effectiveSlots,
+      individualAppointments,
     });
-  }, [svgTemplate2, examWeek, effectiveDate1, effectiveDate2, startTime, effectiveStartTime2, interval, effectiveSlots]);
+  }, [svgTemplate2, examWeek, effectiveDate1, effectiveDate2, startTime, effectiveStartTime2, interval, effectiveSlots, individualAppointments]);
 
   /* ── Shuffle Action ─────────────────────────────────────── */
   const shuffleStudents = useCallback(() => {
@@ -267,6 +285,27 @@ export default function ExamScheduler({
     setLockedSeats(next);
     setSlotOverrides(null);
     onSaveGroup?.({ ...(activeGroup?.examSettings || {}), lockedSeats: next, customOrder, slotOverrides: null });
+  }
+
+  function saveIndividualTime(studentKey, time) {
+    if (!studentKey || !time) {
+      notify('Оқушы мен жеке уақытты таңдаңыз');
+      return;
+    }
+    const next = { ...individualTimes, [studentKey]: time };
+    setIndividualTimes(next);
+    setSlotOverrides(null);
+    onSaveGroup?.({ ...(activeGroup?.examSettings || {}), individualTimes: next, slotOverrides: null });
+    setIndividualStudentId('');
+    notify('Жеке тапсыру уақыты сақталды ✓');
+  }
+
+  function removeIndividualTime(studentKey) {
+    const next = { ...individualTimes };
+    delete next[studentKey];
+    setIndividualTimes(next);
+    onSaveGroup?.({ ...(activeGroup?.examSettings || {}), individualTimes: next });
+    notify('Жеке уақыт алынып тасталды');
   }
 
   /* ── Options for Student Swapping ───────────────────────── */
@@ -340,7 +379,7 @@ export default function ExamScheduler({
     try {
       const fileName = `сабақ_тапсыру_${activeGroup?.name || 'топ'}_${examWeek}.png`;
       await downloadSvg2AsPng(filledSvg2, fileName);
-      notify('PNG сурет сәтті жүктелді (1828 × 841)!');
+      notify('PNG сурет сәтті жүктелді!');
     } catch (e) {
       console.error(e);
       notify('Қате: ' + (e?.message || e));
@@ -402,10 +441,17 @@ export default function ExamScheduler({
       if (!col2Has) text += `(бос)\n`;
     }
 
+    if (individualAppointments.length) {
+      text += '\n\n⏰ ЖЕКЕ УАҚЫТ (НЕГІЗГІ КЕСТЕДЕН КЕЙІН):\n';
+      individualAppointments.forEach(({ student, time }) => {
+        text += `• ${time} - ${addMinutesToTime(time, interval)}: ${student.name}\n`;
+      });
+    }
+
     navigator.clipboard.writeText(text.trim())
       .then(() => notify('WhatsApp мәтіні көшірілді! ✓'))
       .catch(() => notify('Көшіру мүмкін болмады'));
-  }, [students, examWeek, activeGroup, scheduleMode, effectiveDate1, effectiveDate2, startTime, effectiveStartTime2, interval, effectiveSlots, notify]);
+  }, [students, examWeek, activeGroup, scheduleMode, effectiveDate1, effectiveDate2, startTime, effectiveStartTime2, interval, effectiveSlots, individualAppointments, notify]);
 
   /* ── Save Current Settings ──────────────────────────────── */
   function handleSave() {
@@ -421,6 +467,7 @@ export default function ExamScheduler({
       slotOverrides,
       lockedSeats,
       customOrder,
+      individualTimes,
     });
   }
 
@@ -536,6 +583,25 @@ export default function ExamScheduler({
               </div>
             ))}
           </div>
+        </section>
+
+        <section style={{ border: '1px solid #ddd6fe', background: '#faf9ff', borderRadius: '10px', padding: '12px' }}>
+          <FieldLabel>ЖЕКЕ ТАПСЫРУ УАҚЫТЫ</FieldLabel>
+          <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>Оқушы негізгі кестеден алынып, постер мен көшірмеде соңына жеке уақытпен қосылады.</div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 95px', gap: '6px', marginBottom: '7px' }}>
+            <select value={individualStudentId} onChange={e => setIndividualStudentId(e.target.value)} aria-label="Жеке уақыт қоятын оқушыны таңдаңыз" style={{ minWidth: 0, padding: '8px', borderRadius: '7px', border: '1px solid #d1d5db', background: '#fff', fontSize: '12px' }}>
+              <option value="">Оқушыны таңдаңыз</option>
+              {students.map(student => { const key = examStudentRuleKey(student, students); return <option key={key} value={key}>{student.name}</option>; })}
+            </select>
+            <input type="time" value={individualTimeDraft} onChange={e => setIndividualTimeDraft(e.target.value)} aria-label="Жеке тапсыру уақыты" style={{ width: '100%', padding: '7px', borderRadius: '7px', border: '1px solid #d1d5db', background: '#fff' }} />
+          </div>
+          <Btn size="sm" onClick={() => saveIndividualTime(individualStudentId, individualTimeDraft)} fullWidth sx={{ justifyContent: 'center' }}>+ Жеке уақыт қосу</Btn>
+          {individualAppointments.length > 0 && <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '9px' }}>
+            {individualAppointments.map(({ student, time }) => { const key = examStudentRuleKey(student, students); return <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', background: '#fff', border: '1px solid #e9e5ff', borderRadius: '7px', padding: '6px 8px' }}>
+              <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{student.name}</span><b style={{ color: BRAND }}>{time}</b>
+              <button type="button" onClick={() => removeIndividualTime(key)} aria-label={`${student.name}: жеке уақытты жою`} title="Жеке уақытты жою" style={{ border: 0, background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '15px', padding: '0 2px' }}>×</button>
+            </div>; })}
+          </div>}
         </section>
 
         {/* 4 · Time and Date Settings (No sticky masks, standard time inputs) */}
