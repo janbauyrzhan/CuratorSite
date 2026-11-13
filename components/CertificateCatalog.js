@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Download } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Search } from 'lucide-react';
 
 const FONT = '"Certificate Open Sans"';
 const TEMPLATES = [
@@ -13,15 +13,67 @@ const TEMPLATES = [
   { id: 'classic', label: 'Классикалық', period: 'Айлық', monthly: true, student: [720, 345, 64, 750, 'center'], teacher: [455, 561, 28, 450, 'center'], curator: [1010, 561, 28, 450, 'center'], description: [720, 404, 620, 20, 27, 'center'], teacherLabel: [312, 584] },
   { id: 'best-pair', label: 'Үздік жұптық жұмыс', period: 'Айлық', pair: true, student: [590, 359], teacherX: 96, curatorX: 259, color: '#e8c7c9' },
   { id: 'best-notes', label: 'Үздік конспект', period: 'Айлық', student: [590, 391], teacherX: 101, curatorX: 264, color: '#92c0f5' },
+  ...[1, 2].map(place => ({
+    id: 'reward-' + place, label: 'Ашық рейтинг · ' + place + '-орын',
+    period: 'Айлық', detail: place === 1 ? '4000 ₸' : '2000 ₸', place, custom: true,
+    width: 810, height: 1012.49997, canvasHeight: 2025,
+    student: [405, 703, 42, 650, '#fff', 'center'],
+    teacher: [42, 805, 22, 300, '#fff', 'left'],
+    curator: [770, 805, 22, 280, '#fff', 'right'],
+    teacherLabel: [42, 829, 20, 160, '#fff', 'left'],
+    periodPosition: [405, 920, 18, 600, '#fff', 'center'],
+  })),
+  ...[1, 2, 3].map(place => ({
+    id: 'weekly-cup-' + place, label: 'Күміс кубок · ' + place + '-орын',
+    period: 'Апталық', place, custom: true,
+    width: 1814.25, height: 1281.749962, canvasWidth: 1920, canvasHeight: 1356,
+    student: [70, 596, 100, 950, '#fff', 'left'],
+    teacher: [85, 1120, 30, 360, '#fff', 'left'],
+    curator: [745, 1120, 30, 360, '#fff', 'right'],
+    teacherLabel: [85, 1086, 30, 250, '#fff', 'left'],
+    periodPosition: [85, 1210, 24, 600, '#fff', 'left'],
+  })),
+  {
+    id: 'monthly-gold', label: 'Алтын кубок · 1-орын', period: 'Айлық', place: 1, custom: true,
+    width: 419.25, height: 297.749991, canvasHeight: 1151,
+    student: [31, 153, 15, 235, '#171717', 'left'],
+    teacher: [32, 263, 9, 140, '#171717', 'left'],
+    curator: [315, 263, 9, 130, '#171717', 'right'],
+    teacherLabel: [31, 252, 9, 90, '#171717', 'left'],
+    periodPosition: [31, 284, 7, 230, '#6c43bb', 'left'],
+  },
+  {
+    id: 'monthly-notes', label: 'Үздік конспект · Кітаптар', period: 'Айлық', custom: true,
+    width: 419.25, height: 297.749991, canvasHeight: 1151,
+    student: [31, 153, 15, 265, '#003faf', 'left'],
+    teacher: [32, 263, 9, 140, '#171717', 'left'],
+    curator: [279, 263, 9, 130, '#171717', 'right'],
+    teacherLabel: [31, 252, 9, 90, '#171717', 'left'],
+    periodPosition: [31, 284, 7, 230, '#003faf', 'left'],
+  },
+  {
+    id: 'monthly-pair', label: 'Үздік жұптық жұмыс · Бірлік', period: 'Айлық', custom: true, pair: true,
+    width: 419.25, height: 297.749991, canvasHeight: 1151,
+    student: [31, 145, 11, 230, '#171717', 'left'],
+    secondStudent: [31, 157, 11, 230, '#171717', 'left'],
+    teacher: [32, 263, 9, 140, '#171717', 'left'],
+    curator: [253, 263, 9, 120, '#171717', 'right'],
+    teacherLabel: [31, 252, 9, 90, '#171717', 'left'],
+    periodPosition: [31, 284, 7, 230, '#ae4b37', 'left'],
+  },
 ].map(template => {
-  const src = template.place
-    ? '/certificates/weekly/place-' + template.place + '.svg'
-    : '/certificates/monthly/' + template.id + '.svg';
+  const src = template.custom
+    ? '/certificates/collection/' + template.id + '.svg'
+    : template.place
+      ? '/certificates/weekly/place-' + template.place + '.svg'
+      : '/certificates/monthly/' + template.id + '.svg';
   return {
     ...template, src,
-    thumbnail: template.place ? src : src.replace('.svg', '.webp'),
-    width: template.monthly ? 1440 : 810,
-    height: template.monthly ? 810 : 572.249966,
+    thumbnail: !template.custom && template.place ? src : src.replace('.svg', '.webp'),
+    width: template.width || (template.monthly ? 1440 : 810),
+    height: template.height || (template.monthly ? 810 : 572.249966),
+    canvasWidth: template.canvasWidth || (template.monthly ? 1920 : 1620),
+    canvasHeight: template.canvasHeight || (template.monthly ? 1080 : 1145),
   };
 });
 
@@ -53,6 +105,19 @@ function renderCertificate(canvas, image, template, values, photo) {
 
   function positionedText(value, [x, y, size, width, align]) {
     text(value, x, y, size, width, '#fff', align);
+  }
+
+  if (template.custom) {
+    text(values.student, ...template.student);
+    text(values.teacher, ...template.teacher);
+    text(values.curator, ...template.curator);
+    text('Мұғалімі', ...template.teacherLabel);
+    if (template.pair) text(values.secondStudent, ...template.secondStudent);
+    const period = template.period === 'Айлық'
+      ? values.month + '-АЙ · ' + values.week + '-АПТА'
+      : values.week + '-АПТА';
+    text(period, ...template.periodPosition);
+    return;
   }
 
   if (template.monthly) {
@@ -115,6 +180,8 @@ function renderCertificate(canvas, image, template, values, photo) {
 
 export default function CertificateCatalog() {
   const [selectedId, setSelectedId] = useState(TEMPLATES[0].id);
+  const [editing, setEditing] = useState(false);
+  const [query, setQuery] = useState('');
   const [names, setNames] = useState({});
   const [teacher, setTeacher] = useState('');
   const [curator, setCurator] = useState('');
@@ -131,9 +198,16 @@ export default function CertificateCatalog() {
   const [exportError, setExportError] = useState('');
   const [downloading, setDownloading] = useState(false);
   const canvas = useRef(null);
+  const main = useRef(null);
+  const galleryScroll = useRef(0);
+  const galleryButton = useRef(null);
+  const editorTitle = useRef(null);
   const photoRequest = useRef(0);
   useEffect(() => () => { photoRequest.current += 1; }, []);
   const template = TEMPLATES.find(item => item.id === selectedId);
+  const normalizedQuery = query.trim().toLocaleLowerCase('kk');
+  const visibleTemplates = TEMPLATES.filter(item =>
+    (item.label + ' ' + item.period + ' ' + (item.detail || '')).toLocaleLowerCase('kk').includes(normalizedQuery));
   const student = names[selectedId]?.student || '';
   const secondStudent = names[selectedId]?.secondStudent || '';
   const validWeek = /^[1-9]\d?$/.test(week);
@@ -174,7 +248,23 @@ export default function CertificateCatalog() {
   useEffect(() => {
     if (!image || !canvas.current) return;
     renderCertificate(canvas.current, image, template, certificateValues(), photo);
-  }, [image, template, student, secondStudent, teacher, curator, week, month, awardPlace, subject, score, photo]);
+  }, [image, template, student, secondStudent, teacher, curator, week, month, awardPlace, subject, score, photo, editing]);
+
+  useEffect(() => {
+    if (editing) {
+      main.current?.scrollTo({ top: 0 });
+      editorTitle.current?.focus({ preventScroll: true });
+    } else {
+      main.current?.scrollTo({ top: galleryScroll.current });
+      galleryButton.current?.focus({ preventScroll: true });
+    }
+  }, [editing]);
+
+  function openTemplate(id) {
+    galleryScroll.current = main.current?.scrollTop || 0;
+    setSelectedId(id);
+    setEditing(true);
+  }
 
   function changeName(field, value) {
     setNames(current => ({ ...current, [selectedId]: { ...current[selectedId], [field]: value } }));
@@ -226,21 +316,40 @@ export default function CertificateCatalog() {
   }
 
   return (
-    <main className="certificate-catalog" aria-labelledby="certificates-title">
-      <header className="workspace-heading">
-        <h1 id="certificates-title">Сертификаттар</h1>
+    <main ref={main} className="certificate-catalog" aria-labelledby="certificates-title">
+      <header className="workspace-heading certificate-heading">
+        <div>
+          {editing && <button type="button" className="certificate-back" onClick={() => setEditing(false)}>
+            <ArrowLeft size={16} aria-hidden="true" /> Үлгілерге оралу
+          </button>}
+          <h1 id="certificates-title" ref={editorTitle} tabIndex={-1}>{editing ? template.label : 'Сертификаттар'}</h1>
+        </div>
+        {!editing && <label className="certificate-search">
+          <Search size={17} aria-hidden="true" />
+          <input type="search" aria-label="Сертификат іздеу" placeholder="Үлгіні іздеу" value={query} onChange={e => setQuery(e.target.value)} />
+        </label>}
       </header>
-      <div className="certificate-templates" role="group" aria-label="Сертификат үлгісін таңдау">
-        {TEMPLATES.map(item => (
-          <button key={item.id} type="button" aria-pressed={selectedId === item.id} onClick={() => setSelectedId(item.id)}>
-            <img src={item.thumbnail} alt="" loading="lazy" />
-            <span><small>{item.period}</small>{item.label}</span>
-          </button>
-        ))}
-      </div>
-      <div className="certificate-editor">
+      {!editing && <>
+        <div className="certificate-templates" role="group" aria-label="Сертификат үлгісін таңдау">
+          {visibleTemplates.map(item => (
+            <button key={item.id} type="button" ref={selectedId === item.id ? galleryButton : null}
+              aria-label={item.period + ' · ' + item.label + (item.detail ? ' · ' + item.detail : '')}
+              onClick={() => openTemplate(item.id)}>
+              <img src={item.thumbnail} alt="" loading="lazy" />
+              <span className="certificate-card-copy">
+                <small>{item.period}{item.detail ? ' · ' + item.detail : ''}</small>
+                <strong>{item.label}</strong>
+                <ArrowRight size={16} aria-hidden="true" />
+              </span>
+            </button>
+          ))}
+        </div>
+        {visibleTemplates.length === 0 && <p className="certificate-no-results" role="status">
+          Үлгі табылмады. Басқа сөзбен іздеп көріңіз.
+        </p>}
+      </>}
+      {editing && <div className="certificate-editor">
         <form className="certificate-form" onSubmit={download} autoComplete="off">
-          <h2>{template.label}</h2>
           <label>{template.pair ? 'Бірінші оқушының аты-жөні' : 'Оқушының аты-жөні'}
             <input value={student} onChange={e => changeName('student', e.target.value)} required maxLength={120} />
           </label>
@@ -280,12 +389,12 @@ export default function CertificateCatalog() {
           </button>
           {exportError && <p role="alert">{exportError}</p>}
         </form>
-        <div className="certificate-preview" style={{ aspectRatio: template.width + ' / ' + template.height }}>
+        <div className="certificate-preview" style={{ aspectRatio: image ? undefined : template.width + ' / ' + template.height }}>
           {!image && <p role={error ? 'alert' : 'status'}>{error || 'Үлгі жүктеліп жатыр…'}</p>}
-          <canvas ref={canvas} width={template.monthly ? 1920 : 1620} height={template.monthly ? 1080 : 1145} hidden={!image}
+          <canvas ref={canvas} width={template.canvasWidth} height={template.canvasHeight} hidden={!image}
             role="img" aria-label={template.label + ' сертификатының алдын ала көрінісі'} />
         </div>
-      </div>
+      </div>}
     </main>
   );
 }
