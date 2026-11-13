@@ -26,20 +26,20 @@ export default function WorkspaceHome({ username, onSelect }) {
               <div className="module-visual" aria-hidden="true"><Users size={46} strokeWidth={1.4} /><span className="module-visual-label">Бірге үйренеміз</span><span className="module-number">01</span></div>
               <div className="module-content">
                 <h3>Жұптық жұмыс</h3>
-                <p>Оқушыларды жұптарға бөліп, апта сайынғы постерді дайындаңыз. Қажет болса, жұптарды қолмен өзгертіңіз.</p>
+                <p>Оқушыларды жұпқа бөліп, дайын постерді жүктеп алыңыз.</p>
                 <button className="brand-button" onClick={() => onSelect('pairs')}>Жұптарды құру <ArrowUpRight size={18} /></button>
               </div>
             </article>
             <article className="module-card module-card-exam">
-              <div className="module-visual" aria-hidden="true"><Clock size={46} strokeWidth={1.4} /><span className="module-visual-label">Әр сабақ өз уақытында</span><span className="module-number">02</span></div>
+              <div className="module-visual" aria-hidden="true"><Clock size={46} strokeWidth={1.4} /><span className="module-visual-label">Сабақ тапсыру кестесі</span><span className="module-number">02</span></div>
               <div className="module-content">
                 <h3>Сабақ тапсыру</h3>
-                <p>Күнді, басталу уақытын және аралықты белгілеңіз. Дайын кестені суретке сақтап, оқушыларға жіберіңіз.</p>
+                <p>Тапсыру күні мен уақытын белгілеңіз. Қажет болса, оқушыға жеке уақыт тағайындаңыз.</p>
                 <button className="brand-button" onClick={() => onSelect('exam')}>Кестені дайындау <ArrowUpRight size={18} /></button>
               </div>
             </article>
             <article className="module-card module-card-certificates">
-              <div className="module-visual" aria-hidden="true"><Award size={46} strokeWidth={1.4} /><span className="module-visual-label">Жетістікті атап өтіңіз</span><span className="module-number">03</span></div>
+              <div className="module-visual" aria-hidden="true"><Award size={46} strokeWidth={1.4} /><span className="module-visual-label">Сертификат үлгілері</span><span className="module-number">03</span></div>
               <div className="module-content">
                 <h3>Сертификаттар</h3>
                 <p>Оқушыларға арналған сертификат үлгілерінің каталогы.</p>
