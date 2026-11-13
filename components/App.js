@@ -26,7 +26,7 @@ import {
 } from '@/lib/utils';
 import { getSupabaseClient } from '@/lib/supabaseClient';
 import {
-  fillSvgTemplate, downloadSvgAsPng, RAW_SVG_TEMPLATE
+  fillSvgTemplate, downloadSvgAsPng, RAW_SVG_TEMPLATE, ROW_CENTERS
 } from '@/lib/svgTemplate';
 
 /* ── Constants ──────────────────────────────────────────────── */
@@ -428,6 +428,15 @@ export default function App() {
       showPhones: true,
     });
   }, [svgTemplate, weekText, subjectText, currentPairs]);
+
+  const pairPosterHeight = Number(filledSvg.match(/viewBox="0 0 1702 ([\d.]+)"/)?.[1]) || 988;
+  const pairLockControls = currentPairs.map((pair, pIdx) => {
+    const pinned = Boolean(pinnedPairs[safeWeek]?.[pIdx]);
+    const y = ROW_CENTERS[pIdx] ?? 949;
+    return <button key={`poster-pair-lock-${pIdx}`} type="button" onClick={() => togglePinnedPair(pIdx, pair)} disabled={!pair?.[0] || !pair?.[1] || pair[0].id === '__bye__' || pair[1].id === '__bye__'} aria-label={`${pIdx + 1}-жұп: ${pinned ? 'бекітуден алу' : 'бекіту'}`} aria-pressed={pinned} title={pinned ? 'Бұл жұп осы аптаға бекітілген' : 'Осы жұпты бекіту'} style={{ position: 'absolute', left: `${(850 / 1702) * 100}%`, top: `${(y / pairPosterHeight) * 100}%`, transform: 'translate(-50%, -50%)', width: '26px', height: '26px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', border: `1px solid ${pinned ? '#f59e0b' : '#cbd5e1'}`, background: pinned ? '#fef3c7' : '#fff', color: pinned ? '#b45309' : '#64748b', cursor: 'pointer', boxShadow: '0 1px 4px rgba(15,23,42,.2)', zIndex: 3, pointerEvents: 'auto' }}>
+      {pinned ? <Lock size={14} /> : <Unlock size={14} />}
+    </button>;
+  });
 
   /* ══ DEMO ONBOARDING ACTION (Pairs only, scoped to active group) ══ */
   function insertDemoData() {
@@ -1908,7 +1917,11 @@ export default function App() {
 
             {/* SVG Live Poster Preview */}
             <div style={{ width: '100%', maxWidth: '1020px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <Poster svgString={filledSvg} />
+              <div style={{ fontSize: '12px', color: '#64748b' }}>Нажмите 🔓 между именами пары, чтобы закрепить её на эту неделю. Значки не попадут в скачанный постер.</div>
+              <div style={{ position: 'relative', width: '100%' }}>
+                <Poster svgString={filledSvg} />
+                <div aria-label="Закрепление пар на постере" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>{pairLockControls}</div>
+              </div>
             </div>
           </main>
         </div>

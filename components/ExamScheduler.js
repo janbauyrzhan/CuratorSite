@@ -7,10 +7,10 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Download, Shuffle, Clock, Plus, Trash2, Check, ArrowLeftRight, MessageCircle,
+  Download, Shuffle, Clock, Plus, Trash2, Check, ArrowLeftRight, MessageCircle, Lock, Unlock,
 } from 'lucide-react';
 import {
-  fillSvgTemplate2, downloadSvg2AsPng, addMinutesToTime, RAW_SVG_TEMPLATE2,
+  fillSvgTemplate2, downloadSvg2AsPng, addMinutesToTime, RAW_SVG_TEMPLATE2, SLOT_NAME_Y,
 } from '@/lib/svgTemplate2';
 import { cleanStudentName } from '@/lib/utils';
 
@@ -273,18 +273,17 @@ export default function ExamScheduler({
     notify('Тізім реті қалпына келтірілді');
   }, [lockedSeats, onSaveGroup, activeGroup, notify]);
 
-  function setStudentLock(studentId, value) {
+  function toggleStudentLockAtSeat(studentId, seatIndex) {
     const next = { ...lockedSeats };
-    if (value === '') delete next[studentId];
-    else {
-      const index = Number(value) - 1;
-      const occupant = Object.entries(next).find(([id, seat]) => id !== studentId && Number(seat) === index)?.[0];
+    if (Number(next[studentId]) === seatIndex) {
+      delete next[studentId];
+    } else {
+      const occupant = Object.entries(next).find(([id, seat]) => id !== studentId && Number(seat) === seatIndex)?.[0];
       if (occupant) delete next[occupant];
-      next[studentId] = index;
+      next[studentId] = seatIndex;
     }
     setLockedSeats(next);
-    setSlotOverrides(null);
-    onSaveGroup?.({ ...(activeGroup?.examSettings || {}), lockedSeats: next, customOrder, slotOverrides: null });
+    onSaveGroup?.({ ...(activeGroup?.examSettings || {}), lockedSeats: next, customOrder, slotOverrides });
   }
 
   function saveIndividualTime(studentKey, time) {
@@ -471,6 +470,18 @@ export default function ExamScheduler({
     });
   }
 
+  const posterHeight = Number(filledSvg2.match(/viewBox="0 0 1828 ([\d.]+)"/)?.[1]) || 841;
+  const seatLockControls = effectiveSlots.flatMap((slot, slotIndex) => slot.map((student, studentIndex) => {
+    const row = slotIndex % 8;
+    const y = slot.length === 1 ? SLOT_NAME_Y[row].y1 : SLOT_NAME_Y[row][studentIndex === 0 ? 'y1' : 'y2'];
+    const x = slotIndex < 8 ? 438 : 1305;
+    const seatIndex = slotIndex * 2 + studentIndex;
+    const locked = Number(lockedSeats?.[student.id]) === seatIndex;
+    return <button key={student.id} type="button" onClick={() => toggleStudentLockAtSeat(student.id, seatIndex)} aria-label={`${student.name}: ${locked ? 'орынды бекітуден алу' : 'орынды бекіту'}`} aria-pressed={locked} title={locked ? 'Бекітілген орын. Басып, ашыңыз.' : 'Қазіргі орынды бекіту'} style={{ position: 'absolute', left: `${(x / 1828) * 100}%`, top: `${(y / posterHeight) * 100}%`, transform: 'translate(-50%, -50%)', width: '24px', height: '24px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', border: `1px solid ${locked ? '#f59e0b' : '#cbd5e1'}`, background: locked ? '#fef3c7' : '#fff', color: locked ? '#b45309' : '#64748b', cursor: 'pointer', boxShadow: '0 1px 4px rgba(15,23,42,.18)', zIndex: 3, pointerEvents: 'auto' }}>
+      {locked ? <Lock size={13} /> : <Unlock size={13} />}
+    </button>;
+  }));
+
   /* ──────────────────────────────────────────────────────────── */
   return (
     <div className="pair-workspace" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
@@ -567,22 +578,6 @@ export default function ExamScheduler({
         <section>
           <FieldLabel>АПТА АТАУЫ (ПОСТЕРДЕГІ БЕЙДЖ)</FieldLabel>
           <CleanInput value={examWeek} onChange={e => setExamWeek(e.target.value)} placeholder='Мыс: "1-апта"' />
-        </section>
-
-        <section style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px' }}>
-          <FieldLabel>БЕКІТІЛГЕН ОРЫНДАР</FieldLabel>
-          <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>Оқушыға кезек нөмірін қойыңыз. Араластыруда ол орын сақталады.</div>
-          <div style={{ maxHeight: '190px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '5px' }}>
-            {students.map(student => (
-              <div key={student.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
-                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{student.name}</span>
-                <select aria-label={`${student.name} орны`} value={Object.hasOwn(lockedSeats || {}, student.id) ? Number(lockedSeats[student.id]) + 1 : ''} onChange={e => setStudentLock(student.id, e.target.value)} style={{ width: '90px', padding: '4px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff' }}>
-                  <option value="">Бекітпеу</option>
-                  {Array.from({ length: students.length }, (_, seat) => <option key={seat} value={seat + 1}>{seat + 1}-орын</option>)}
-                </select>
-              </div>
-            ))}
-          </div>
         </section>
 
         <section style={{ border: '1px solid #ddd6fe', background: '#faf9ff', borderRadius: '10px', padding: '12px' }}>
@@ -968,6 +963,10 @@ export default function ExamScheduler({
 
         {/* Live SVG Poster 2 */}
         <div style={{ width: '100%', maxWidth: '1060px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+          <div style={{ fontSize: '12px', color: '#64748b', width: '100%' }}>Нажмите 🔓 рядом с учеником, чтобы закрепить его место. Значки видны только здесь и не попадут в PNG.</div>
+          <div
+            style={{ position: 'relative', width: '100%' }}
+          >
           <div
             id="poster-export-exam"
             style={{
@@ -979,6 +978,10 @@ export default function ExamScheduler({
             }}
             dangerouslySetInnerHTML={{ __html: filledSvg2 }}
           />
+          <div aria-label="Закрепление мест учеников" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            {seatLockControls}
+          </div>
+          </div>
         </div>
       </main>
     </div>
