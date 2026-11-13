@@ -19,6 +19,7 @@ import ExamScheduler from './ExamScheduler';
 import WeeklyPlanner from './WeeklyPlanner';
 import CertificateCatalog from './CertificateCatalog';
 import {readPlanDrafts,writePlanDraft,mergePlanDrafts,acknowledgePlanDrafts} from '@/lib/planDrafts';
+import { readFavoriteDrafts, writeFavoriteDraft, mergeFavoriteDrafts, acknowledgeFavoriteDrafts } from '@/lib/certificateFavorites';
 import PlanSubjects, {PLAN_SUBJECTS} from './PlanSubjects';
 import {
   uid, makeSchedule, makeGenderedSchedule,
@@ -201,6 +202,7 @@ export default function App() {
 
   /* ── Group State (Strictly isolated per username) ───────── */
   const [groups,       setGroups]       = useState([]);
+  const [favoriteCertificates, setFavoriteCertificates] = useState([]);
   const [activeGid,    setActiveGid]    = useState(null);
   const [showNewGroup, setShowNewGroup] = useState(false);
   const [newName,      setNewName]      = useState('');
@@ -252,6 +254,7 @@ export default function App() {
 
   const resetWorkspace = useCallback(() => {
     setGroups([]); setActiveGid(null); setRawTextPairs(''); setStudentsPairs([]);
+    setFavoriteCertificates([]);
     setCustomPairsOrder(null); setRawTextExam(''); setStudentsExam([]);
     setSchedule([]); setPairOverrides({}); setPinnedPairs({}); setWeekIdx(0); setDivType('mixed');
   }, []);
@@ -271,6 +274,7 @@ export default function App() {
     const applyWorkspace = (workspace) => {
       const savedGroups = mergePlanDrafts(Array.isArray(workspace?.groups) ? workspace.groups : [],readPlanDrafts(authUser.id));
       setGroups(savedGroups);
+      setFavoriteCertificates(mergeFavoriteDrafts(workspace?.favoriteCertificates, readFavoriteDrafts(authUser.id)));
       const selectedGid = workspace?.activeGid || savedGroups[0]?.id || null;
       setActiveGid(selectedGid);
       setWeekIdx(workspace?.weekIdx || 0);
@@ -358,7 +362,7 @@ export default function App() {
   /* ── Persist cloud workspace after edits ────────────────── */
   useEffect(() => {
     if (!supabase || !user?.id || !workspaceLoaded || !cloudHydrated || workspaceError) return;
-    const data = { groups, activeGid, weekIdx, divType };
+    const data = { groups, activeGid, weekIdx, divType, favoriteCertificates };
     const version=++saveVersion.current;
     setSyncState('saving');
     const timer = setTimeout(() => {
@@ -374,22 +378,35 @@ export default function App() {
         notify('Cloud-қа сақтау қатесі: ' + (error.message || 'Қайта көріңіз'));
       } else {
         acknowledgePlanDrafts(user.id,data.groups);
+        acknowledgeFavoriteDrafts(user.id, data.favoriteCertificates);
         if(version===saveVersion.current)setSyncState('saved');
       }
       }).catch(()=>{setSyncState('error');});
     }, 700);
     return () => clearTimeout(timer);
-  }, [supabase, user, groups, activeGid, weekIdx, divType, workspaceLoaded, cloudHydrated, workspaceError, notify,syncRetry]);
+  }, [supabase, user, groups, activeGid, weekIdx, divType, favoriteCertificates, workspaceLoaded, cloudHydrated, workspaceError, notify,syncRetry]);
 
   // Keep a user-scoped copy for instant rendering on the next visit or tab restore.
   useEffect(() => {
     if (!user?.id || !workspaceLoaded) return;
     try {
-      window.localStorage.setItem(`infologia-workspace-cache:${user.id}`, JSON.stringify({ groups, activeGid, weekIdx, divType }));
+      window.localStorage.setItem(`infologia-workspace-cache:${user.id}`, JSON.stringify({ groups, activeGid, weekIdx, divType, favoriteCertificates }));
     } catch {
       // Local storage can be disabled or full; the Supabase copy remains authoritative.
     }
-  }, [user, groups, activeGid, weekIdx, divType, workspaceLoaded]);
+  }, [user, groups, activeGid, weekIdx, divType, favoriteCertificates, workspaceLoaded]);
+
+  function changeFavoriteCertificate(id, favorite) {
+    if (!user?.id) return;
+    try {
+      writeFavoriteDraft(user.id, id, favorite);
+    } catch {
+      notify('Құрылғыға сақтау мүмкін болмады. Cloud сақталуын күтіңіз.');
+    }
+    setFavoriteCertificates(current => favorite
+      ? current.includes(id) ? current : [...current, id]
+      : current.filter(item => item !== id));
+  }
 
   /* ── Rebuild Schedule when Pairs Students or Division Mode Changes */
   const orderedStudentsPairs = useMemo(() => {
@@ -826,7 +843,7 @@ export default function App() {
     setSyncState('saving');
     const { error } = await supabase.from('user_workspaces').upsert({
       user_id: user.id,
-      data: source.data,
+      data: { ...source.data, favoriteCertificates },
       updated_at: new Date().toISOString(),
     }, { onConflict: 'user_id' });
     if (error) {
@@ -1533,7 +1550,7 @@ export default function App() {
           </main>
         </div>
       ) : activeTab === 'certificates' ? (
-        <CertificateCatalog />
+        <CertificateCatalog favorites={favoriteCertificates} onFavoriteChange={changeFavoriteCertificate} />
       ) : activeTab === 'plan' ? (
         !['informatics','mathematics','physics'].includes(planSubject) ? <PlanSubjects subject={planSubject} onSelect={selectPlanSubject}/> :
         <WeeklyPlanner userId={user?.id} syncState={syncState} groups={groups} activeGid={activeGid} selectGroup={selectGroup} notify={notify} subject={planSubject}

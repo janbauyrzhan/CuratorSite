@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { ArrowLeft, ArrowRight, Download, Search } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Download, Heart, Search } from 'lucide-react';
 
 const FONT = '"Certificate Open Sans"';
 const TEMPLATES = [
@@ -89,41 +89,66 @@ function loadImage(src) {
 function renderCertificate(canvas, image, template, values, photo) {
   const context = canvas.getContext('2d');
   if (!context) throw new Error('Canvas context unavailable');
+  const regions = [];
   context.setTransform(canvas.width / template.width, 0, 0, canvas.height / template.height, 0, 0);
   context.clearRect(0, 0, template.width, template.height);
   context.drawImage(image, 0, 0, template.width, template.height);
   context.textBaseline = 'alphabetic';
 
-  function text(value, x, y, size, maxWidth, color = '#fff', align = 'center') {
+  function mark(field, x, y, width, height, align = 'left') {
+    const left = align === 'center' ? x - width / 2 : align === 'right' ? x - width : x;
+    regions.push({ field, x: Math.max(0, left), y: Math.max(0, y), width, height });
+  }
+
+  function text(value, x, y, size, maxWidth, color = '#fff', align = 'center', field) {
     context.textAlign = align;
     context.font = '700 ' + size + 'px ' + FONT + ', sans-serif';
     const width = context.measureText(value).width;
-    if (width > maxWidth) context.font = '700 ' + Math.max(8, size * maxWidth / width) + 'px ' + FONT + ', sans-serif';
+    const fittedSize = width > maxWidth ? Math.max(8, size * maxWidth / width) : size;
+    if (width > maxWidth) context.font = '700 ' + fittedSize + 'px ' + FONT + ', sans-serif';
     context.fillStyle = color;
     context.fillText(value, x, y, maxWidth);
+    if (field) {
+      const fittedWidth = Math.max(Math.min(context.measureText(value).width, maxWidth), Math.min(maxWidth, fittedSize * 2.5));
+      mark(field, x, y - fittedSize, fittedWidth, fittedSize * 1.15, align);
+    }
   }
 
-  function positionedText(value, [x, y, size, width, align]) {
-    text(value, x, y, size, width, '#fff', align);
+  function positionedText(value, [x, y, size, width, align], field) {
+    text(value, x, y, size, width, '#fff', align, field);
+  }
+
+  function completedRegions() {
+    if (!template.pair) return regions;
+    const first = regions.find(region => region.field === 'student');
+    const second = regions.find(region => region.field === 'secondStudent');
+    if (!first || !second) return regions;
+    const x = Math.min(first.x, second.x);
+    const y = Math.min(first.y, second.y);
+    return [
+      ...regions.filter(region => region.field !== 'student' && region.field !== 'secondStudent'),
+      { field: 'pair', x, y, width: Math.max(first.x + first.width, second.x + second.width) - x,
+        height: Math.max(first.y + first.height, second.y + second.height) - y },
+    ];
   }
 
   if (template.custom) {
-    text(values.student, ...template.student);
-    text(values.teacher, ...template.teacher);
-    text(values.curator, ...template.curator);
+    text(values.student, ...template.student, 'student');
+    text(values.teacher, ...template.teacher, 'teacher');
+    text(values.curator, ...template.curator, 'curator');
     text('Мұғалімі', ...template.teacherLabel);
-    if (template.pair) text(values.secondStudent, ...template.secondStudent);
+    if (template.pair) text(values.secondStudent, ...template.secondStudent, 'secondStudent');
     const period = template.period === 'Айлық'
       ? values.month + '-АЙ · ' + values.week + '-АПТА'
       : values.week + '-АПТА';
-    text(period, ...template.periodPosition);
-    return;
+    text(period, ...template.periodPosition, 'schedule');
+    return completedRegions();
   }
 
   if (template.monthly) {
-    positionedText(values.student, template.student);
-    positionedText(values.teacher, template.teacher);
-    positionedText(values.curator, template.curator);
+    positionedText(values.student, template.student, 'student');
+    positionedText(values.teacher, template.teacher, 'teacher');
+    positionedText(values.curator, template.curator, 'curator');
     text('Мұғалім', ...template.teacherLabel, 22, 170, '#fff', 'left');
     const [x, y, width, size, lineHeight, align] = template.description;
     const description = values.month + '-ай ' + values.week + '-апта рейтингі бойынша ТОП-' + values.awardPlace
@@ -142,10 +167,11 @@ function renderCertificate(canvas, image, template, values, photo) {
     }
     lines.push(line);
     lines.forEach((value, index) => text(value, x, y + index * lineHeight, size, width, '#fff', align));
+    mark('schedule', x, y - size, width, lines.length * lineHeight, align);
     if (template.id === 'trophy') {
-      text(values.subject, 267, 77, 24, 225);
-      text(values.month, 566, 77, 24, 50);
-      text(values.score, 810, 77, 23, 125);
+      text(values.subject, 267, 77, 24, 225, '#fff', 'center', 'subject');
+      text(values.month, 566, 77, 24, 50, '#fff', 'center', 'month');
+      text(values.score, 810, 77, 23, 125, '#fff', 'center', 'score');
     }
     if (template.id === 'photo') {
       context.save();
@@ -163,25 +189,42 @@ function renderCertificate(canvas, image, template, values, photo) {
         text('Фотосурет қосыңыз', 290, 413, 26, 360);
       }
       context.restore();
+      mark('photo', 84, 109, 413, 594);
     }
-    return;
+    return regions;
   }
 
-  text(values.student, ...template.student, template.pair ? 24 : 27, 365, template.color);
-  if (template.pair) text(values.secondStudent, 590, 382, 24, 365, template.color);
-  text(values.teacher, template.teacherX, 484, 15, 150);
-  text(values.curator, template.curatorX, 484, 15, 150);
+  text(values.student, ...template.student, template.pair ? 24 : 27, 365, template.color, 'center', 'student');
+  if (template.pair) text(values.secondStudent, 590, 382, 24, 365, template.color, 'center', 'secondStudent');
+  text(values.teacher, template.teacherX, 484, 15, 150, '#fff', 'center', 'teacher');
+  text(values.curator, template.curatorX, 484, 15, 150, '#fff', 'center', 'curator');
   if (template.place) {
-    text(values.week + '-АПТА БОЙЫНША ТОП ' + template.place, ...template.week, 13, 209, '#141414');
+    text(values.week + '-АПТА БОЙЫНША ТОП ' + template.place, ...template.week, 13, 209, '#141414', 'center', 'schedule');
   } else {
-    text(values.month + '-АЙ · ' + values.week + '-АПТА', 176, 551, 12, 290, template.color);
+    text(values.month + '-АЙ · ' + values.week + '-АПТА', 176, 551, 12, 290, template.color, 'center', 'schedule');
   }
+  return completedRegions();
 }
 
-export default function CertificateCatalog() {
+const FIELD_LABELS = {
+  student: 'Оқушының аты-жөні',
+  secondStudent: 'Екінші оқушының аты-жөні',
+  pair: 'Жұптың есімдері',
+  teacher: 'Мұғалімнің аты-жөні',
+  curator: 'Куратордың аты-жөні',
+  month: 'Ай нөмірі',
+  week: 'Апта нөмірі',
+  subject: 'Пән',
+  score: 'Балл',
+  schedule: 'Ай, апта және орын',
+  photo: 'Фотосуретті өзгерту',
+};
+
+export default function CertificateCatalog({ favorites = [], onFavoriteChange = () => {} }) {
   const [selectedId, setSelectedId] = useState(TEMPLATES[0].id);
   const [editing, setEditing] = useState(false);
   const [query, setQuery] = useState('');
+  const [scope, setScope] = useState(favorites.length ? 'mine' : 'all');
   const [names, setNames] = useState({});
   const [teacher, setTeacher] = useState('');
   const [curator, setCurator] = useState('');
@@ -197,7 +240,12 @@ export default function CertificateCatalog() {
   const [error, setError] = useState('');
   const [exportError, setExportError] = useState('');
   const [downloading, setDownloading] = useState(false);
+  const [regions, setRegions] = useState([]);
+  const [activeEdit, setActiveEdit] = useState(null);
   const canvas = useRef(null);
+  const photoInput = useRef(null);
+  const inlineInput = useRef(null);
+  const targetButtons = useRef({});
   const main = useRef(null);
   const galleryScroll = useRef(0);
   const galleryButton = useRef(null);
@@ -207,26 +255,31 @@ export default function CertificateCatalog() {
   const template = TEMPLATES.find(item => item.id === selectedId);
   const normalizedQuery = query.trim().toLocaleLowerCase('kk');
   const visibleTemplates = TEMPLATES.filter(item =>
-    (item.label + ' ' + item.period + ' ' + (item.detail || '')).toLocaleLowerCase('kk').includes(normalizedQuery));
+    (scope === 'all' || favorites.includes(item.id))
+    && (item.label + ' ' + item.period + ' ' + (item.detail || '')).toLocaleLowerCase('kk').includes(normalizedQuery));
   const student = names[selectedId]?.student || '';
   const secondStudent = names[selectedId]?.secondStudent || '';
   const validWeek = /^[1-9]\d?$/.test(week);
   const validMonth = /^[1-9]\d?$/.test(month);
   const monthlyPeriod = template.period === 'Айлық';
   const image = loaded?.src === template.src ? loaded.image : null;
+  const examplePhoto = loaded?.src === template.src ? loaded.examplePhoto : null;
   const canDownload = image && validWeek && (!monthlyPeriod || validMonth)
     && student.trim() && teacher.trim() && curator.trim()
     && (!template.pair || secondStudent.trim())
     && (template.id !== 'trophy' || (subject.trim() && score.trim()))
-    && (template.id !== 'photo' || (photo && !photoLoading)) && !downloading;
+    && (template.id !== 'photo' || (examplePhoto && !photoLoading)) && !downloading;
 
   useEffect(() => {
     let cancelled = false;
     setError('');
     setExportError('');
-    Promise.all([loadImage(template.src), document.fonts.load('700 27px ' + FONT)])
-      .then(([nextImage]) => {
-        if (!cancelled) setLoaded({ src: template.src, image: nextImage });
+    Promise.all([
+      loadImage(template.src),
+      document.fonts.load('700 27px ' + FONT),
+      template.id === 'photo' ? loadImage('/certificates/monthly/example-cat.jpg') : Promise.resolve(null),
+    ]).then(([nextImage, , nextExample]) => {
+        if (!cancelled) setLoaded({ src: template.src, image: nextImage, examplePhoto: nextExample });
       })
       .catch(() => {
         if (!cancelled) setError('Үлгі немесе қаріп жүктелмеді. Бетті жаңартып көріңіз.');
@@ -247,8 +300,12 @@ export default function CertificateCatalog() {
 
   useEffect(() => {
     if (!image || !canvas.current) return;
-    renderCertificate(canvas.current, image, template, certificateValues(), photo);
-  }, [image, template, student, secondStudent, teacher, curator, week, month, awardPlace, subject, score, photo, editing]);
+    setRegions(renderCertificate(canvas.current, image, template, certificateValues(), photo || examplePhoto));
+  }, [image, template, student, secondStudent, teacher, curator, week, month, awardPlace, subject, score, photo, examplePhoto, editing]);
+
+  useEffect(() => {
+    if (activeEdit) inlineInput.current?.focus();
+  }, [activeEdit]);
 
   useEffect(() => {
     if (editing) {
@@ -262,12 +319,21 @@ export default function CertificateCatalog() {
 
   function openTemplate(id) {
     galleryScroll.current = main.current?.scrollTop || 0;
+    setActiveEdit(null);
     setSelectedId(id);
     setEditing(true);
   }
 
   function changeName(field, value) {
     setNames(current => ({ ...current, [selectedId]: { ...current[selectedId], [field]: value } }));
+  }
+
+  function resetPhoto() {
+    photoRequest.current += 1;
+    setPhoto(null);
+    setPhotoError('');
+    setPhotoLoading(false);
+    if (photoInput.current) photoInput.current.value = '';
   }
 
   async function choosePhoto(event) {
@@ -294,7 +360,7 @@ export default function CertificateCatalog() {
     setDownloading(true);
     setExportError('');
     try {
-      renderCertificate(canvas.current, image, template, certificateValues(), photo);
+      renderCertificate(canvas.current, image, template, certificateValues(), photo || examplePhoto);
       const blob = await new Promise(resolve => canvas.current.toBlob(resolve, 'image/png'));
       if (!blob) throw new Error('PNG export failed');
       const url = URL.createObjectURL(blob);
@@ -315,6 +381,64 @@ export default function CertificateCatalog() {
     }
   }
 
+  const inlineFields = {
+    student: { value: student, change: value => changeName('student', value), maxLength: 120 },
+    secondStudent: { value: secondStudent, change: value => changeName('secondStudent', value), maxLength: 120 },
+    teacher: { value: teacher, change: setTeacher, maxLength: 120 },
+    curator: { value: curator, change: setCurator, maxLength: 120 },
+    month: { value: month, change: setMonth, type: 'number' },
+    week: { value: week, change: setWeek, type: 'number' },
+    subject: { value: subject, change: setSubject, maxLength: 80 },
+    score: { value: score, change: setScore, maxLength: 30 },
+  };
+
+  function regionStyle(region) {
+    const left = 100 * region.x / template.width;
+    const top = 100 * region.y / template.height;
+    return {
+      left: left + '%', top: top + '%',
+      width: Math.min(100 - left, 100 * region.width / template.width) + '%',
+      height: Math.min(100 - top, 100 * region.height / template.height) + '%',
+    };
+  }
+
+  function editRegion(region) {
+    if (region.field === 'photo') {
+      photoInput.current?.click();
+      return;
+    }
+    setActiveEdit(region);
+  }
+
+  function finishInlineEdit(restoreFocus = false) {
+    const field = activeEdit?.field;
+    setActiveEdit(null);
+    if (restoreFocus && field) {
+      window.requestAnimationFrame(() => {
+        if (document.activeElement === document.body) targetButtons.current[field]?.focus({ preventScroll: true });
+      });
+    }
+  }
+
+  function inlineField(field, first = false) {
+    const item = inlineFields[field];
+    return <label key={field}>
+      {FIELD_LABELS[field]}
+      <input ref={first ? inlineInput : undefined} aria-label={'Постер — ' + FIELD_LABELS[field]}
+        type={item.type || 'text'} min={item.type === 'number' ? '1' : undefined}
+        max={item.type === 'number' ? '99' : undefined} maxLength={item.maxLength}
+        value={item.value} onChange={event => item.change(event.target.value)} />
+    </label>;
+  }
+
+  const isFavorite = favorites.includes(template.id);
+  const groupedEdit = activeEdit?.field === 'schedule' || activeEdit?.field === 'pair';
+  const inlineFieldNames = activeEdit?.field === 'pair'
+    ? ['student', 'secondStudent']
+    : activeEdit?.field === 'schedule'
+      ? monthlyPeriod ? ['month', 'week'] : ['week']
+      : activeEdit ? [activeEdit.field] : [];
+
   return (
     <main ref={main} className="certificate-catalog" aria-labelledby="certificates-title">
       <header className="workspace-heading certificate-heading">
@@ -324,29 +448,50 @@ export default function CertificateCatalog() {
           </button>}
           <h1 id="certificates-title" ref={editorTitle} tabIndex={-1}>{editing ? template.label : 'Сертификаттар'}</h1>
         </div>
+        {editing && <button type="button" className="certificate-editor-favorite"
+          aria-pressed={isFavorite} onClick={() => onFavoriteChange(template.id, !isFavorite)}>
+          <Heart size={17} fill={isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
+          {isFavorite ? 'Таңдаулыда' : 'Таңдаулыға қосу'}
+        </button>}
         {!editing && <label className="certificate-search">
           <Search size={17} aria-hidden="true" />
           <input type="search" aria-label="Сертификат іздеу" placeholder="Үлгіні іздеу" value={query} onChange={e => setQuery(e.target.value)} />
         </label>}
       </header>
       {!editing && <>
+        <div className="certificate-filter" aria-label="Каталог">
+          <button type="button" aria-pressed={scope === 'all'} onClick={() => setScope('all')}>Барлық үлгілер</button>
+          <button type="button" aria-pressed={scope === 'mine'} onClick={() => setScope('mine')}>
+            <Heart size={15} aria-hidden="true" /> Менің каталогым ({favorites.length})
+          </button>
+        </div>
         <div className="certificate-templates" role="group" aria-label="Сертификат үлгісін таңдау">
           {visibleTemplates.map(item => (
-            <button key={item.id} type="button" ref={selectedId === item.id ? galleryButton : null}
-              aria-label={item.period + ' · ' + item.label + (item.detail ? ' · ' + item.detail : '')}
-              onClick={() => openTemplate(item.id)}>
-              <img src={item.thumbnail} alt="" loading="lazy" />
-              <span className="certificate-card-copy">
-                <small>{item.period}{item.detail ? ' · ' + item.detail : ''}</small>
-                <strong>{item.label}</strong>
-                <ArrowRight size={16} aria-hidden="true" />
-              </span>
-            </button>
+            <article className="certificate-card" key={item.id}>
+              <button className="certificate-card-open" type="button" ref={selectedId === item.id ? galleryButton : null}
+                aria-label={item.period + ' · ' + item.label + (item.detail ? ' · ' + item.detail : '')}
+                onClick={() => openTemplate(item.id)}>
+                <img src={item.thumbnail} alt="" loading="lazy" />
+                <span className="certificate-card-copy">
+                  <small>{item.period}{item.detail ? ' · ' + item.detail : ''}</small>
+                  <strong>{item.label}</strong>
+                  <ArrowRight size={16} aria-hidden="true" />
+                </span>
+              </button>
+              <button className="certificate-favorite" type="button" aria-pressed={favorites.includes(item.id)}
+                aria-label={item.label + (favorites.includes(item.id) ? ' — таңдаулылардан алып тастау' : ' — таңдаулыларға қосу')}
+                onClick={() => onFavoriteChange(item.id, !favorites.includes(item.id))}>
+                <Heart size={18} fill={favorites.includes(item.id) ? 'currentColor' : 'none'} aria-hidden="true" />
+              </button>
+            </article>
           ))}
         </div>
-        {visibleTemplates.length === 0 && <p className="certificate-no-results" role="status">
-          Үлгі табылмады. Басқа сөзбен іздеп көріңіз.
-        </p>}
+        {visibleTemplates.length === 0 && (scope === 'mine' && favorites.length === 0
+          ? <div className="certificate-no-results" role="status">
+              <p>Жүрек белгісі арқылы ұнаған үлгілерді осы жерге қосыңыз.</p>
+              <button type="button" className="certificate-back" onClick={() => setScope('all')}>Барлық үлгілерді қарау</button>
+            </div>
+          : <p className="certificate-no-results" role="status">Үлгі табылмады. Басқа сөзбен іздеп көріңіз.</p>)}
       </>}
       {editing && <div className="certificate-editor">
         <form className="certificate-form" onSubmit={download} autoComplete="off">
@@ -380,19 +525,57 @@ export default function CertificateCatalog() {
             <label>Балл<input value={score} onChange={e => setScore(e.target.value)} maxLength={30} required /></label>
           </>}
           {template.id === 'photo' && <label>Оқушының фотосуреті
-            <input type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} />
+            <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} />
             {photoLoading && <span role="status">Фотосурет жүктеліп жатыр…</span>}
             {photoError && <span role="alert">{photoError}</span>}
           </label>}
+          {template.id === 'photo' && (!photo
+            ? <p className="certificate-photo-note">Үлгідегі сурет көрсетіліп тұр. Өзіңіздің фотосуретіңізді жүктей аласыз.</p>
+            : <button type="button" className="certificate-photo-reset" onClick={resetPhoto}>Үлгі суретін қайтару</button>)}
           <button className="brand-button" type="submit" disabled={!canDownload}>
             <Download size={16} aria-hidden="true" /> {downloading ? 'Дайындалып жатыр…' : 'PNG жүктеу'}
           </button>
           {exportError && <p role="alert">{exportError}</p>}
         </form>
-        <div className="certificate-preview" style={{ aspectRatio: image ? undefined : template.width + ' / ' + template.height }}>
-          {!image && <p role={error ? 'alert' : 'status'}>{error || 'Үлгі жүктеліп жатыр…'}</p>}
-          <canvas ref={canvas} width={template.canvasWidth} height={template.canvasHeight} hidden={!image}
-            role="img" aria-label={template.label + ' сертификатының алдын ала көрінісі'} />
+        <div className="certificate-visual">
+          <p className="certificate-edit-hint">Мәтінді өзгерту үшін постердегі жазуды басыңыз.</p>
+          <div className="certificate-preview" style={{ aspectRatio: image ? undefined : template.width + ' / ' + template.height }}>
+            {!image && <p role={error ? 'alert' : 'status'}>{error || 'Үлгі жүктеліп жатыр…'}</p>}
+            <div className="certificate-poster" hidden={!image}
+              style={{ aspectRatio: template.width + ' / ' + template.height,
+                '--poster-max-width': 'calc(' + (100 * template.width / template.height) + 'vh - ' + (225 * template.width / template.height) + 'px)' }}>
+              <canvas ref={canvas} width={template.canvasWidth} height={template.canvasHeight}
+                role="img" aria-label={template.label + ' сертификатының алдын ала көрінісі'} />
+              {image && regions.map(region => (
+                <button key={region.field} type="button"
+                  className={'certificate-hit-target' + (region.field === 'photo' ? ' certificate-hit-photo' : '')}
+                  ref={element => { targetButtons.current[region.field] = element; }}
+                  aria-label={'Постер — ' + (region.field === 'schedule' && !monthlyPeriod ? FIELD_LABELS.week : FIELD_LABELS[region.field])}
+                  title={region.field === 'schedule' && !monthlyPeriod ? FIELD_LABELS.week : FIELD_LABELS[region.field]}
+                  style={regionStyle(region)} onClick={() => editRegion(region)} />
+              ))}
+              {activeEdit && <div className="certificate-inline-editor"
+                style={{ left: Math.min(100 * activeEdit.x / template.width, 40) + '%',
+                  maxWidth: (100 - Math.min(100 * activeEdit.x / template.width, 40)) + '%',
+                  width: groupedEdit ? '250px' : 'max(250px, ' + (100 * activeEdit.width / template.width) + '%)',
+                  top: Math.min(100 * activeEdit.y / template.height, groupedEdit ? 52 : 78) + '%' }}
+                onBlur={event => { if (!event.currentTarget.contains(event.relatedTarget)) finishInlineEdit(); }}
+                onKeyDown={event => {
+                  if (event.key === 'Escape' || (event.key === 'Enter' && !groupedEdit)) {
+                    event.preventDefault();
+                    finishInlineEdit(true);
+                  }
+                }}>
+                {inlineFieldNames.map((field, index) => inlineField(field, index === 0))}
+                {activeEdit.field === 'schedule' && template.monthly && <label>Орын
+                  <select value={awardPlace} onChange={event => setAwardPlace(event.target.value)}>
+                    {[1, 2, 3].map(value => <option key={value} value={value}>{value}-орын</option>)}
+                  </select>
+                </label>}
+                {groupedEdit && <button type="button" onClick={() => finishInlineEdit(true)}>Дайын</button>}
+              </div>}
+            </div>
+          </div>
         </div>
       </div>}
     </main>
