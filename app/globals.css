@@ -93,6 +93,54 @@ button:disabled { cursor: not-allowed; }
 .workspace-toolbar .ui-button { padding: 10px 14px !important; font-size: 11px !important; min-height: 39px; }
 .workspace-toolbar .ui-button-success { background: #22241e !important; }
 
+.exam-workspace .exam-sidebar { flex-shrink: 0; overflow-y: auto; }
+.exam-settings-fields { display: grid; gap: 16px; }
+.exam-settings-toggle { display: none; }
+.exam-workspace .exam-main { min-width: 0; gap: 16px !important; }
+.exam-toolbar, .exam-tool-buttons { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; }
+.exam-tools { display: grid; gap: 10px; width: 100%; max-width: 1060px; }
+.exam-tool-buttons { padding-top: 12px; border-top: 1px solid var(--line); }
+.exam-tool-buttons .ui-button[aria-expanded="true"] {
+  background: #eeedfb !important;
+  border-color: #b7b3e5 !important;
+  color: #45418f !important;
+}
+.exam-tool-panel { background: #fff; border: 1px solid var(--line); border-radius: 10px; padding: 14px; }
+.exam-individual-time { max-width: 440px; }
+
+@media (max-width: 850px) {
+  .exam-workspace.pair-workspace { display: block !important; overflow-y: auto !important; }
+  .exam-workspace .exam-sidebar {
+    width: 100% !important;
+    max-height: none;
+    padding: 12px 16px !important;
+    overflow: visible;
+    border-right: 0 !important;
+    border-bottom: 1px solid var(--line);
+  }
+  .exam-settings-toggle {
+    display: flex;
+    width: 100%;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--brand);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .exam-settings-toggle span { flex: 1; text-align: left; }
+  .exam-settings-toggle[aria-expanded="true"] svg:last-child { transform: rotate(180deg); }
+  .exam-settings-fields { display: none; }
+  .exam-settings-fields.is-open { display: grid; margin-top: 14px; }
+  .exam-workspace .exam-main { width: 100%; overflow: visible !important; }
+  .exam-tool-buttons .ui-button { flex: 1 1 140px; justify-content: center; }
+}
+
 @media (max-width: 1150px) {
   .app-header { padding: 12px 20px !important; flex-wrap: wrap; gap: 10px; }
   .app-header-left { gap: 16px !important; }

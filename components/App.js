@@ -1539,7 +1539,7 @@ export default function App() {
             gap: '14px', alignItems: 'center',
           }}>
 
-            <div className="workspace-heading"><span className="eyebrow">Куратор құралдары</span><h1>Жұптық жұмыс</h1><p>Жұптарды реттеп, дайын постермен бөлісіңіз.</p></div>
+            <div className="workspace-heading"><h1>Жұптық жұмыс</h1><p>Жұптарды реттеп, дайын постермен бөлісіңіз.</p></div>
 
             {/* Onboarding block for colleagues when list or group is empty */}
             {(!activeGid || !rawTextPairs.trim() || studentsPairs.length === 0) && (
