@@ -7,7 +7,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Download, Shuffle, Clock, Plus, Trash2, Check,
+  Download, Shuffle, Clock, Plus, Trash2, Check, Pencil,
   CalendarDays, ChevronDown, FolderOpen, Users, RotateCcw,
 } from 'lucide-react';
 import {
@@ -171,13 +171,15 @@ export default function ExamScheduler({
   const [lockedSeats, setLockedSeats] = useState(activeGroup?.examSettings?.lockedSeats || {});
   const [individualTimes, setIndividualTimes] = useState(activeGroup?.examSettings?.individualTimes || {});
   const [individualStudentId, setIndividualStudentId] = useState('');
-  const [individualTimeDraft, setIndividualTimeDraft] = useState('18:00');
+  const [individualTimeDraft, setIndividualTimeDraft] = useState('');
 
   useEffect(() => {
     setSlotOverrides(activeGroup?.examSettings?.slotOverrides || null);
     setLockedSeats(activeGroup?.examSettings?.lockedSeats || {});
     setCustomOrder(activeGroup?.examSettings?.customOrder || null);
     setIndividualTimes(activeGroup?.examSettings?.individualTimes || {});
+    setIndividualStudentId('');
+    setIndividualTimeDraft('');
   }, [activeGroup?.id]);
 
   // Auto-calculated Column 2 Start Time for single_day mode
@@ -190,10 +192,13 @@ export default function ExamScheduler({
 
   const effectiveDate1 = scheduleMode === 'single_day' ? dateSingle : dateCol1;
   const effectiveDate2 = scheduleMode === 'single_day' ? dateSingle : dateCol2;
-  const individualAppointments = useMemo(() => Object.entries(individualTimes || {})
-    .map(([key, time]) => ({ student: students.find(s => examStudentRuleKey(s, students) === key), time }))
+  const studentsByRuleKey = useMemo(() => new Map(students.map(student => [
+    examStudentRuleKey(student, students), student,
+  ])), [students]);
+  const individualAppointments = useMemo(() => Object.entries(individualTimes)
+    .map(([key, time]) => ({ key, student: studentsByRuleKey.get(key), time }))
     .filter(item => item.student && item.time)
-    .sort((a, b) => a.time.localeCompare(b.time) || a.student.name.localeCompare(b.student.name)), [individualTimes, students]);
+    .sort((a, b) => a.time.localeCompare(b.time) || a.student.name.localeCompare(b.student.name)), [individualTimes, studentsByRuleKey]);
 
   /* ── SVG Template 2 ─────────────────────────────────────── */
   const [svgTemplate2, setSvgTemplate2] = useState(RAW_SVG_TEMPLATE2);
@@ -348,23 +353,36 @@ export default function ExamScheduler({
     onSaveGroup?.({ lockedSeats: next, slotOverrides: nextOrder });
   }
 
-  function saveIndividualTime(studentKey, time) {
-    if (!studentKey || !time) {
-      notify('Оқушы мен жеке уақытты таңдаңыз');
-      return;
-    }
-    const next = { ...individualTimes, [studentKey]: time };
+  function selectIndividualStudent(key) {
+    setIndividualStudentId(key);
+    const student = studentsByRuleKey.get(key);
+    const slot = student ? effectiveSlots.findIndex(row => row.some(item => item.id === student.id)) : -1;
+    const currentTime = slot >= 0
+      ? addMinutesToTime(slot < 8 ? startTime : effectiveStartTime2, (slot % 8) * interval)
+      : '';
+    setIndividualTimeDraft(individualTimes[key] || currentTime);
+  }
+
+  const editingIndividualTime = Boolean(individualTimes[individualStudentId]);
+  const canSaveIndividualTime = studentsByRuleKey.has(individualStudentId) &&
+    /^([01][0-9]|2[0-3]):[0-5][0-9]$/.test(individualTimeDraft) &&
+    individualTimes[individualStudentId] !== individualTimeDraft;
+
+  function saveIndividualTime(event) {
+    event.preventDefault();
+    if (!canSaveIndividualTime) return;
+    const next = { ...individualTimes, [individualStudentId]: individualTimeDraft };
     setIndividualTimes(next);
     onSaveGroup?.({ individualTimes: next });
-    setIndividualStudentId('');
-    notify('Жеке тапсыру уақыты сақталды ✓');
+    notify(editingIndividualTime ? 'Жеке уақыт өзгертілді ✓' : 'Жеке тапсыру уақыты сақталды ✓');
   }
 
   function removeIndividualTime(studentKey) {
     const next = { ...individualTimes };
     delete next[studentKey];
     setIndividualTimes(next);
-    onSaveGroup?.({ ...(activeGroup?.examSettings || {}), individualTimes: next });
+    onSaveGroup?.({ individualTimes: next });
+    if (individualStudentId === studentKey) selectIndividualStudent('');
     notify('Жеке уақыт алынып тасталды');
   }
 
@@ -739,20 +757,35 @@ export default function ExamScheduler({
             )}
             {activeTool === 'individual' && (
               <div>
-                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>Жеке уақыт тағайындалған оқушы постердің соңында көрсетіледі.</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 95px', gap: '6px', marginBottom: '7px' }}>
-                  <select value={individualStudentId} onChange={e => setIndividualStudentId(e.target.value)} aria-label="Жеке уақыт қоятын оқушыны таңдаңыз" style={{ minWidth: 0, padding: '8px', borderRadius: '7px', border: '1px solid #d1d5db', background: '#fff', fontSize: '12px' }}>
-                    <option value="">Оқушыны таңдаңыз</option>
-                    {students.map(student => { const key = examStudentRuleKey(student, students); return <option key={key} value={key}>{student.name}</option>; })}
-                  </select>
-                  <input type="time" value={individualTimeDraft} onChange={e => setIndividualTimeDraft(e.target.value)} aria-label="Жеке тапсыру уақыты" style={{ width: '100%', padding: '7px', borderRadius: '7px', border: '1px solid #d1d5db', background: '#fff' }} />
-                </div>
-                <Btn size="sm" onClick={() => saveIndividualTime(individualStudentId, individualTimeDraft)} fullWidth sx={{ justifyContent: 'center' }}>+ Жеке уақыт қосу</Btn>
+                <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>Оқушыны таңдаңыз немесе тізімдегі уақытты басып, оны өзгертіңіз.</div>
+                <form onSubmit={saveIndividualTime}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(95px, auto)', gap: '6px', marginBottom: '7px' }}>
+                    <select value={individualStudentId} onChange={e => selectIndividualStudent(e.target.value)} aria-label="Жеке уақыт қоятын оқушыны таңдаңыз" style={{ minWidth: 0, padding: '8px', borderRadius: '7px', border: '1px solid #d1d5db', background: '#fff', fontSize: '12px' }}>
+                      <option value="">Оқушыны таңдаңыз</option>
+                      {[...studentsByRuleKey].map(([key, student]) => <option key={key} value={key}>{student.name}</option>)}
+                    </select>
+                    <input type="time" value={individualTimeDraft} onChange={e => setIndividualTimeDraft(e.target.value)} aria-label="Жеке тапсыру уақыты" required style={{ width: '100%', padding: '7px', borderRadius: '7px', border: '1px solid #d1d5db', background: '#fff' }} />
+                  </div>
+                  <Btn type="submit" size="sm" disabled={!canSaveIndividualTime} fullWidth sx={{ justifyContent: 'center' }}>
+                    {editingIndividualTime ? 'Уақытты сақтау' : 'Жеке уақыт қосу'}
+                  </Btn>
+                </form>
                 {individualAppointments.length > 0 && <div style={{ display: 'flex', flexDirection: 'column', gap: '5px', marginTop: '9px' }}>
-                  {individualAppointments.map(({ student, time }) => { const key = examStudentRuleKey(student, students); return <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', background: '#fff', border: '1px solid #e9e5ff', borderRadius: '7px', padding: '6px 8px' }}>
-                    <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{student.name}</span><b style={{ color: BRAND }}>{time}</b>
-                    <button type="button" onClick={() => removeIndividualTime(key)} aria-label={`${student.name}: жеке уақытты жою`} title="Жеке уақытты жою" style={{ border: 0, background: 'transparent', color: '#dc2626', cursor: 'pointer', fontSize: '15px', padding: '0 2px' }}>×</button>
-                  </div>; })}
+                  {individualAppointments.map(({ key, student, time }) => (
+                    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px', background: '#fff', border: '1px solid #e9e5ff', borderRadius: '7px', padding: '4px 8px' }}>
+                      <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{student.name}</span>
+                      <Btn variant="ghost" size="sm" onClick={() => selectIndividualStudent(key)}
+                        aria-label={`${student.name}: ${time}, уақытты өзгерту`} title="Уақытты өзгерту"
+                        sx={{ color: BRAND, whiteSpace: 'nowrap', padding: '4px 6px' }}>
+                        <Pencil size={12} aria-hidden="true" /> {time}
+                      </Btn>
+                      <Btn variant="ghost" size="sm" onClick={() => removeIndividualTime(key)}
+                        aria-label={`${student.name}: жеке уақытты жою`} title="Жеке уақытты жою"
+                        sx={{ color: '#dc2626', padding: '4px 6px' }}>
+                        <Trash2 size={13} aria-hidden="true" />
+                      </Btn>
+                    </div>
+                  ))}
                 </div>}
               </div>
             )}
