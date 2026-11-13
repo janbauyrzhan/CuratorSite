@@ -2,6 +2,9 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Download, Heart, Search } from 'lucide-react';
+import CertificateStudentField from './CertificateStudentField';
+import CertificateHistory from './CertificateHistory';
+import { EXTRA_CERTIFICATE_TEMPLATES } from './ExtraCertificateTemplates';
 
 const FONT = '"Certificate Open Sans"';
 const TEMPLATES = [
@@ -61,6 +64,7 @@ const TEMPLATES = [
     teacherLabel: [31, 252, 9, 90, '#171717', 'left'],
     periodPosition: [31, 284, 7, 230, '#ae4b37', 'left'],
   },
+  ...EXTRA_CERTIFICATE_TEMPLATES,
 ].map(template => {
   const src = template.custom
     ? '/certificates/collection/' + template.id + '.svg'
@@ -220,11 +224,12 @@ const FIELD_LABELS = {
   photo: 'Фотосуретті өзгерту',
 };
 
-export default function CertificateCatalog({ favorites = [], onFavoriteChange = () => {} }) {
+export default function CertificateCatalog({ favorites = [], onFavoriteChange = () => {}, groups = [], activeGroup = null, onSelectGroup = () => {}, onSaveAward = () => {}, onDeleteAward = () => {} }) {
   const [selectedId, setSelectedId] = useState(TEMPLATES[0].id);
   const [editing, setEditing] = useState(false);
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState(favorites.length ? 'mine' : 'all');
+  const [showHistory, setShowHistory] = useState(false);
   const [names, setNames] = useState({});
   const [teacher, setTeacher] = useState('');
   const [curator, setCurator] = useState('');
@@ -257,8 +262,9 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
   const visibleTemplates = TEMPLATES.filter(item =>
     (scope === 'all' || favorites.includes(item.id))
     && (item.label + ' ' + item.period + ' ' + (item.detail || '')).toLocaleLowerCase('kk').includes(normalizedQuery));
-  const student = names[selectedId]?.student || '';
-  const secondStudent = names[selectedId]?.secondStudent || '';
+  const nameKey = (activeGroup?.id || 'no-group') + ':' + selectedId;
+  const student = names[nameKey]?.student || '';
+  const secondStudent = names[nameKey]?.secondStudent || '';
   const validWeek = /^[1-9]\d?$/.test(week);
   const validMonth = /^[1-9]\d?$/.test(month);
   const monthlyPeriod = template.period === 'Айлық';
@@ -269,6 +275,8 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
     && (!template.pair || secondStudent.trim())
     && (template.id !== 'trophy' || (subject.trim() && score.trim()))
     && (template.id !== 'photo' || (examplePhoto && !photoLoading)) && !downloading;
+  const canSaveAward = activeGroup && validWeek && (!monthlyPeriod || validMonth)
+    && student.trim() && (!template.pair || secondStudent.trim());
 
   useEffect(() => {
     let cancelled = false;
@@ -325,7 +333,7 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
   }
 
   function changeName(field, value) {
-    setNames(current => ({ ...current, [selectedId]: { ...current[selectedId], [field]: value } }));
+    setNames(current => ({ ...current, [nameKey]: { ...current[nameKey], [field]: value } }));
   }
 
   function resetPhoto() {
@@ -373,12 +381,19 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
         : template.id + (template.monthly ? '_' + awardPlace + '-орын' : '');
       link.download = 'сертификат_' + period + '_' + award + '_' + filename + '.png';
       link.click();
+      if (canSaveAward) saveAward();
       window.setTimeout(() => URL.revokeObjectURL(url), 1000);
     } catch {
       setExportError('PNG файлын жүктеу мүмкін болмады.');
     } finally {
       setDownloading(false);
     }
+  }
+
+  function saveAward() {
+    if (!canSaveAward) return;
+    onSaveAward({ template, student: student.trim(), secondStudent: secondStudent.trim(),
+      week: Number(week), month: monthlyPeriod ? Number(month) : null, awardPlace: template.monthly ? Number(awardPlace) : template.place });
   }
 
   const inlineFields = {
@@ -453,18 +468,26 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
           <Heart size={17} fill={isFavorite ? 'currentColor' : 'none'} aria-hidden="true" />
           {isFavorite ? 'Таңдаулыда' : 'Таңдаулыға қосу'}
         </button>}
-        {!editing && <label className="certificate-search">
+        {!editing && !showHistory && <label className="certificate-search">
           <Search size={17} aria-hidden="true" />
           <input type="search" aria-label="Сертификат іздеу" placeholder="Үлгіні іздеу" value={query} onChange={e => setQuery(e.target.value)} />
         </label>}
       </header>
+      {groups.length > 0 && <label className="certificate-group-select">Топ
+        <select value={activeGroup?.id || ''} onChange={event => onSelectGroup(event.target.value)}>
+          <option value="" disabled>Топты таңдаңыз</option>
+          {groups.map(group => <option key={group.id} value={group.id}>{group.name}{group.subject ? ' — ' + group.subject : ''}</option>)}
+        </select>
+      </label>}
       {!editing && <>
         <div className="certificate-filter" aria-label="Каталог">
-          <button type="button" aria-pressed={scope === 'all'} onClick={() => setScope('all')}>Барлық үлгілер</button>
-          <button type="button" aria-pressed={scope === 'mine'} onClick={() => setScope('mine')}>
+          <button type="button" aria-pressed={!showHistory && scope === 'all'} onClick={() => { setScope('all'); setShowHistory(false); }}>Барлық үлгілер</button>
+          <button type="button" aria-pressed={!showHistory && scope === 'mine'} onClick={() => { setScope('mine'); setShowHistory(false); }}>
             <Heart size={15} aria-hidden="true" /> Менің каталогым ({favorites.length})
           </button>
+          <button type="button" aria-pressed={showHistory} onClick={() => setShowHistory(true)}>Марапаттар тарихы</button>
         </div>
+        {showHistory ? <CertificateHistory key={activeGroup?.id || 'none'} group={activeGroup} onDelete={onDeleteAward} /> : <>
         <div className="certificate-templates" role="group" aria-label="Сертификат үлгісін таңдау">
           {visibleTemplates.map(item => (
             <article className="certificate-card" key={item.id}>
@@ -492,15 +515,14 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
               <button type="button" className="certificate-back" onClick={() => setScope('all')}>Барлық үлгілерді қарау</button>
             </div>
           : <p className="certificate-no-results" role="status">Үлгі табылмады. Басқа сөзбен іздеп көріңіз.</p>)}
+        </>}
       </>}
       {editing && <div className="certificate-editor">
         <form className="certificate-form" onSubmit={download} autoComplete="off">
-          <label>{template.pair ? 'Бірінші оқушының аты-жөні' : 'Оқушының аты-жөні'}
-            <input value={student} onChange={e => changeName('student', e.target.value)} required maxLength={120} />
-          </label>
-          {template.pair && <label>Екінші оқушының аты-жөні
-            <input value={secondStudent} onChange={e => changeName('secondStudent', e.target.value)} required maxLength={120} />
-          </label>}
+          <CertificateStudentField group={activeGroup} label={template.pair ? 'Бірінші оқушының аты-жөні' : 'Оқушының аты-жөні'}
+            value={student} onChange={value => changeName('student', value)} />
+          {template.pair && <CertificateStudentField group={activeGroup} label="Екінші оқушының аты-жөні"
+            value={secondStudent} onChange={value => changeName('secondStudent', value)} />}
           <label>Куратордың аты-жөні
             <input value={curator} onChange={e => setCurator(e.target.value)} required maxLength={120} />
           </label>
@@ -535,6 +557,7 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
           <button className="brand-button" type="submit" disabled={!canDownload}>
             <Download size={16} aria-hidden="true" /> {downloading ? 'Дайындалып жатыр…' : 'PNG жүктеу'}
           </button>
+          {activeGroup && <button className="certificate-history-save" type="button" disabled={!canSaveAward} onClick={saveAward}>Нәтижені тарихқа сақтау</button>}
           {exportError && <p role="alert">{exportError}</p>}
         </form>
         <div className="certificate-visual">

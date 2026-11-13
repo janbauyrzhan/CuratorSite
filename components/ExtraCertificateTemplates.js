@@ -1,0 +1,54 @@
+// Each design retains the original fixed award place shown on its artwork.
+const size = { width: 842.25, height: 595.499986, canvasWidth: 1685, canvasHeight: 1191 };
+
+export const EXTRA_CERTIFICATE_TEMPLATES = [
+  {
+    ...size, id: 'cream-award', label: 'Алтын өрнек · 1-орын', period: 'Апталық', place: 1, category: 'Үздік конспект · 1-орын', custom: true,
+    student: [421, 310, 28, 450, '#343434', 'center'],
+    teacher: [260, 490, 14, 180, '#343434', 'center'],
+    curator: [584, 490, 14, 180, '#343434', 'center'],
+    teacherLabel: [260, 468, 11, 120, '#343434', 'center'],
+    periodPosition: [421, 206, 13, 300, '#343434', 'center'],
+  },
+  {
+    ...size, id: 'robot-award', label: 'Роботтар · 1-орын', period: 'Апталық', place: 1, custom: true,
+    student: [421, 325, 28, 420, '#fff', 'center'],
+    teacher: [240, 535, 14, 190, '#fff', 'center'],
+    curator: [600, 535, 14, 190, '#fff', 'center'],
+    teacherLabel: [240, 510, 17, 180, '#fff', 'center'],
+    periodPosition: [421, 235, 17, 430, '#fff', 'center'],
+  },
+  {
+    ...size, id: 'stars-award', label: 'Алтын жұлдыздар · 3-орын', period: 'Апталық', place: 3, custom: true,
+    student: [421, 313, 28, 460, '#0b1320', 'center'],
+    teacher: [240, 490, 11, 160, '#0b1320', 'center'],
+    curator: [590, 490, 11, 160, '#0b1320', 'center'],
+    teacherLabel: [240, 458, 11, 140, '#0b1320', 'center'],
+    periodPosition: [421, 260, 12, 300, '#0b1320', 'center'],
+  },
+  {
+    id: 'neon-award', label: 'Неон · 3-орын', period: 'Апталық', place: 3, custom: true,
+    width: 810, height: 572.249966, canvasWidth: 1620, canvasHeight: 1145,
+    student: [550, 325, 31, 490, '#fc73fd', 'center'],
+    teacher: [200, 525, 14, 225, '#fff', 'center'],
+    curator: [620, 525, 14, 225, '#fff', 'center'],
+    teacherLabel: [200, 498, 16, 190, '#fff', 'center'],
+    periodPosition: [590, 248, 16, 380, '#fff', 'center'],
+  },
+  {
+    ...size, id: 'gold-ribbon-award', label: 'Алтын кубок · 3-орын', period: 'Айлық', place: 3, custom: true,
+    student: [92, 384, 25, 380, '#111111', 'left'],
+    teacher: [555, 558, 13, 175, '#111111', 'center'],
+    curator: [730, 558, 13, 145, '#111111', 'center'],
+    teacherLabel: [555, 579, 11, 100, '#111111', 'center'],
+    periodPosition: [200, 270, 14, 200, '#fff', 'center'],
+  },
+  {
+    ...size, id: 'retro-award', label: 'Ретро · 3-орын', period: 'Айлық', place: 3, custom: true,
+    student: [421, 325, 25, 420, '#111111', 'center'],
+    teacher: [280, 486, 11, 190, '#111111', 'center'],
+    curator: [560, 486, 11, 190, '#111111', 'center'],
+    teacherLabel: [280, 507, 11, 150, '#111111', 'center'],
+    periodPosition: [421, 255, 11, 300, '#111111', 'center'],
+  },
+];

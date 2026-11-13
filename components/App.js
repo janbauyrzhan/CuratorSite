@@ -20,6 +20,8 @@ import WeeklyPlanner from './WeeklyPlanner';
 import CertificateCatalog from './CertificateCatalog';
 import {readPlanDrafts,writePlanDraft,mergePlanDrafts,acknowledgePlanDrafts} from '@/lib/planDrafts';
 import { readFavoriteDrafts, writeFavoriteDraft, mergeFavoriteDrafts, acknowledgeFavoriteDrafts } from '@/lib/certificateFavorites';
+import { readAwardDrafts, writeAwardDraft, mergeAwardDrafts, acknowledgeAwardDrafts, makeAwardId } from '@/lib/certificateAwardHistory';
+import { certificateStudentKey } from './CertificateStudentField';
 import PlanSubjects, {PLAN_SUBJECTS} from './PlanSubjects';
 import {
   uid, makeSchedule, makeGenderedSchedule,
@@ -272,7 +274,10 @@ export default function App() {
     }
 
     const applyWorkspace = (workspace) => {
-      const savedGroups = mergePlanDrafts(Array.isArray(workspace?.groups) ? workspace.groups : [],readPlanDrafts(authUser.id));
+      const savedGroups = mergeAwardDrafts(
+        mergePlanDrafts(Array.isArray(workspace?.groups) ? workspace.groups : [], readPlanDrafts(authUser.id)),
+        readAwardDrafts(authUser.id)
+      );
       setGroups(savedGroups);
       setFavoriteCertificates(mergeFavoriteDrafts(workspace?.favoriteCertificates, readFavoriteDrafts(authUser.id)));
       const selectedGid = workspace?.activeGid || savedGroups[0]?.id || null;
@@ -378,6 +383,7 @@ export default function App() {
         notify('Cloud-қа сақтау қатесі: ' + (error.message || 'Қайта көріңіз'));
       } else {
         acknowledgePlanDrafts(user.id,data.groups);
+        acknowledgeAwardDrafts(user.id, data.groups);
         acknowledgeFavoriteDrafts(user.id, data.favoriteCertificates);
         if(version===saveVersion.current)setSyncState('saved');
       }
@@ -406,6 +412,42 @@ export default function App() {
     setFavoriteCertificates(current => favorite
       ? current.includes(id) ? current : [...current, id]
       : current.filter(item => item !== id));
+  }
+
+  function saveCertificateAward({ template, student, secondStudent, week, month, awardPlace }) {
+    if (!user?.id || !activeGid) return;
+    const group = groups.find(item => item.id === activeGid);
+    if (!group) return;
+    const students = [student, secondStudent].filter(Boolean)
+      .map(name => ({ id: certificateStudentKey(name), name }));
+    const category = template.category || (template.pair ? 'Үздік жұптық жұмыс'
+      : template.id.includes('notes') ? 'Үздік конспект'
+        : awardPlace ? awardPlace + '-орын' : template.label);
+    const award = { week, month, period: template.period, category,
+      templateId: template.id, templateLabel: template.label, students };
+    const id = makeAwardId(award);
+    if (Array.isArray(group.certificateAwards) && group.certificateAwards.some(item => item.id === id)) {
+      notify('Бұл нәтиже тарихта сақталған');
+      return;
+    }
+    const entry = { ...award, id, createdAt: new Date().toISOString() };
+    try {
+      writeAwardDraft(user.id, activeGid, id, entry);
+      notify('Нәтиже марапаттар тарихына қосылды');
+    } catch {
+      notify('Құрылғыға сақтау мүмкін болмады. Cloud сақталуын күтіңіз.');
+    }
+    setGroups(current => mergeAwardDrafts(current, { [activeGid]: { [id]: entry } }));
+  }
+
+  function deleteCertificateAward(id) {
+    if (!user?.id || !activeGid) return;
+    try {
+      writeAwardDraft(user.id, activeGid, id, null);
+    } catch {
+      notify('Құрылғыға сақтау мүмкін болмады. Cloud сақталуын күтіңіз.');
+    }
+    setGroups(current => mergeAwardDrafts(current, { [activeGid]: { [id]: null } }));
   }
 
   /* ── Rebuild Schedule when Pairs Students or Division Mode Changes */
@@ -1550,7 +1592,9 @@ export default function App() {
           </main>
         </div>
       ) : activeTab === 'certificates' ? (
-        <CertificateCatalog favorites={favoriteCertificates} onFavoriteChange={changeFavoriteCertificate} />
+        <CertificateCatalog favorites={favoriteCertificates} onFavoriteChange={changeFavoriteCertificate}
+          groups={groups} activeGroup={activeGroup} onSelectGroup={selectGroup}
+          onSaveAward={saveCertificateAward} onDeleteAward={deleteCertificateAward} />
       ) : activeTab === 'plan' ? (
         !['informatics','mathematics','physics'].includes(planSubject) ? <PlanSubjects subject={planSubject} onSelect={selectPlanSubject}/> :
         <WeeklyPlanner userId={user?.id} syncState={syncState} groups={groups} activeGid={activeGid} selectGroup={selectGroup} notify={notify} subject={planSubject}

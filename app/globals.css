@@ -93,6 +93,8 @@ button:disabled { cursor: not-allowed; }
 .certificate-back { display: inline-flex; align-items: center; gap: 7px; padding: 0 0 9px; border: 0; background: transparent; color: var(--brand); font-size: 12px; font-weight: 600; cursor: pointer; }
 .certificate-search { display: flex; align-items: center; gap: 9px; padding: 10px 13px; border: 1px solid var(--line); border-radius: 8px; background: #fff; color: var(--muted); }
 .certificate-search input { min-width: 0; width: 220px; border: 0; outline-offset: 5px; background: transparent; font-size: 14px; color: var(--ink); }
+.certificate-group-select { display: flex; align-items: center; gap: 10px; margin-top: 18px; color: #67685e; font-size: 12px; font-weight: 600; }
+.certificate-group-select select { max-width: min(360px, 75vw); padding: 9px 11px; border: 1px solid var(--line); border-radius: 7px; background: #fff; color: var(--ink); font-size: 13px; }
 .certificate-filter { display: flex; flex-wrap: wrap; gap: 5px; width: fit-content; margin-top: 22px; padding: 4px; border-radius: 9px; background: #eeeee8; }
 .certificate-filter button { display: inline-flex; align-items: center; gap: 6px; padding: 9px 13px; border: 0; border-radius: 6px; background: transparent; color: #67685e; font-size: 12px; font-weight: 600; cursor: pointer; }
 .certificate-filter button[aria-pressed="true"] { background: #fff; color: var(--brand); box-shadow: 0 1px 4px #00000012; }
@@ -136,6 +138,8 @@ button:disabled { cursor: not-allowed; }
 .certificate-form p { margin: 0; color: #a52222; font-size: 12px; }
 .certificate-form .certificate-photo-note { color: #67685e; line-height: 1.5; }
 .certificate-photo-reset { padding: 0; border: 0; background: transparent; color: var(--brand); font-size: 12px; font-weight: 600; text-align: left; cursor: pointer; }
+.certificate-history-save { padding: 10px 12px; border: 1px solid #d7d6ef; border-radius: 6px; background: #f7f6ff; color: var(--brand); font-size: 12px; font-weight: 600; cursor: pointer; }
+.certificate-history-save:disabled { opacity: .5; }
 .certificate-visual { position: sticky; top: 0; min-width: 0; }
 .certificate-edit-hint { margin: 0 0 10px; color: #67685e; font-size: 12px; line-height: 1.5; }
 .certificate-preview { display: grid; place-items: center; border-radius: 10px; background: #eeeee7; }
