@@ -963,7 +963,7 @@ export default function ExamScheduler({
 
         {/* Live SVG Poster 2 */}
         <div style={{ width: '100%', maxWidth: '1060px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div style={{ fontSize: '12px', color: '#64748b', width: '100%' }}>Нажмите 🔓 рядом с учеником, чтобы закрепить его место. Значки видны только здесь и не попадут в PNG.</div>
+          <div style={{ fontSize: '12px', color: '#64748b', width: '100%' }}>Оқушының орнын бекіту үшін жанындағы 🔓 белгісін басыңыз. Белгілер тек осы жерде көрінеді және PNG файлына түспейді.</div>
           <div
             style={{ position: 'relative', width: '100%' }}
           >
