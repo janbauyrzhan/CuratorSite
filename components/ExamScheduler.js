@@ -144,9 +144,12 @@ export default function ExamScheduler({
   const [swapStudentA, setSwapStudentA]         = useState('');
   const [swapStudentB, setSwapStudentB]         = useState('');
   const [slotOverrides, setSlotOverrides]       = useState(null);
+  const [lockedSeats, setLockedSeats] = useState(activeGroup?.examSettings?.lockedSeats || {});
 
   useEffect(() => {
     setSlotOverrides(activeGroup?.examSettings?.slotOverrides || null);
+    setLockedSeats(activeGroup?.examSettings?.lockedSeats || {});
+    setCustomOrder(activeGroup?.examSettings?.customOrder || null);
     setSwapStudentA('');
     setSwapStudentB('');
   }, [activeGroup?.id]);
@@ -180,26 +183,31 @@ export default function ExamScheduler({
 
   /* ── Distribute students into 16 slots (8 left, 8 right) ── */
   const slots = useMemo(() => {
-    let list = [...students].map(s => ({
+    const list = [...students].map(s => ({
       ...s,
       name: cleanStudentName(s.name),
     }));
-    if (customOrder && customOrder.length > 0) {
-      const map = new Map(list.map(s => [s.id, s]));
-      const ordered = customOrder.map(id => map.get(id)).filter(Boolean);
-      const remaining = list.filter(s => !customOrder.includes(s.id));
-      list = [...ordered, ...remaining];
-    }
+    const map = new Map(list.map(s => [s.id, s]));
+    const order = Array(list.length).fill(null);
+    Object.entries(lockedSeats || {}).forEach(([id, seat]) => {
+      const index = Number(seat);
+      if (map.has(id) && Number.isInteger(index) && index >= 0 && index < order.length && !order[index]) order[index] = id;
+    });
+    const fixedIds = new Set(Object.keys(lockedSeats || {}));
+    const remaining = [...(customOrder || []).filter(id => map.has(id) && !fixedIds.has(id)), ...list.map(s => s.id).filter(id => !(customOrder || []).includes(id) && !fixedIds.has(id))];
+    let cursor = 0;
+    for (let i = 0; i < order.length; i++) if (!order[i]) order[i] = remaining[cursor++];
+    const arranged = order.map(id => map.get(id)).filter(Boolean);
 
     const res = [];
     for (let i = 0; i < 16; i++) {
-      const s1 = list[i * 2] || null;
-      const s2 = list[i * 2 + 1] || null;
+      const s1 = arranged[i * 2] || null;
+      const s2 = arranged[i * 2 + 1] || null;
       const pair = [s1, s2].filter(Boolean);
       res.push(pair);
     }
     return res;
-  }, [students, customOrder]);
+  }, [students, customOrder, lockedSeats]);
 
   /* ── Effective Slots (with manual overrides applied) ────── */
   const effectiveSlots = useMemo(() => {
@@ -226,17 +234,40 @@ export default function ExamScheduler({
       notify('Оқушылар тізімі бос');
       return;
     }
-    const shuffled = [...students].sort(() => Math.random() - 0.5).map(s => s.id);
+    const fixedIds = new Set(Object.keys(lockedSeats || {}));
+    const movable = students.filter(s => !fixedIds.has(s.id)).map(s => s.id);
+    for (let i = movable.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [movable[i], movable[j]] = [movable[j], movable[i]]; }
+    const order = Array(students.length).fill(null);
+    Object.entries(lockedSeats || {}).forEach(([id, seat]) => { const index = Number(seat); if (students.some(s => s.id === id) && index >= 0 && index < order.length) order[index] = id; });
+    let cursor = 0;
+    for (let i = 0; i < order.length; i++) if (!order[i]) order[i] = movable[cursor++];
+    const shuffled = order.filter(Boolean);
     setCustomOrder(shuffled);
     setSlotOverrides(null);
+    onSaveGroup?.({ ...(activeGroup?.examSettings || {}), lockedSeats, customOrder: shuffled, slotOverrides: null });
     notify('🎲 Оқушылар кездейсоқ ретпен қайта бөлінді!');
-  }, [students, notify]);
+  }, [students, lockedSeats, onSaveGroup, activeGroup, notify]);
 
   const resetOrder = useCallback(() => {
     setCustomOrder(null);
     setSlotOverrides(null);
+    onSaveGroup?.({ ...(activeGroup?.examSettings || {}), lockedSeats, customOrder: null, slotOverrides: null });
     notify('Тізім реті қалпына келтірілді');
-  }, [notify]);
+  }, [lockedSeats, onSaveGroup, activeGroup, notify]);
+
+  function setStudentLock(studentId, value) {
+    const next = { ...lockedSeats };
+    if (value === '') delete next[studentId];
+    else {
+      const index = Number(value) - 1;
+      const occupant = Object.entries(next).find(([id, seat]) => id !== studentId && Number(seat) === index)?.[0];
+      if (occupant) delete next[occupant];
+      next[studentId] = index;
+    }
+    setLockedSeats(next);
+    setSlotOverrides(null);
+    onSaveGroup?.({ ...(activeGroup?.examSettings || {}), lockedSeats: next, customOrder, slotOverrides: null });
+  }
 
   /* ── Options for Student Swapping ───────────────────────── */
   const swapOptions = useMemo(() => {
@@ -388,6 +419,8 @@ export default function ExamScheduler({
       manualStartTime2,
       interval,
       slotOverrides,
+      lockedSeats,
+      customOrder,
     });
   }
 
@@ -487,6 +520,22 @@ export default function ExamScheduler({
         <section>
           <FieldLabel>АПТА АТАУЫ (ПОСТЕРДЕГІ БЕЙДЖ)</FieldLabel>
           <CleanInput value={examWeek} onChange={e => setExamWeek(e.target.value)} placeholder='Мыс: "1-апта"' />
+        </section>
+
+        <section style={{ border: '1px solid #e5e7eb', borderRadius: '10px', padding: '12px' }}>
+          <FieldLabel>БЕКІТІЛГЕН ОРЫНДАР</FieldLabel>
+          <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px' }}>Оқушыға кезек нөмірін қойыңыз. Араластыруда ол орын сақталады.</div>
+          <div style={{ maxHeight: '190px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '5px' }}>
+            {students.map(student => (
+              <div key={student.id} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '11px' }}>
+                <span style={{ flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{student.name}</span>
+                <select aria-label={`${student.name} орны`} value={Object.hasOwn(lockedSeats || {}, student.id) ? Number(lockedSeats[student.id]) + 1 : ''} onChange={e => setStudentLock(student.id, e.target.value)} style={{ width: '90px', padding: '4px', borderRadius: '6px', border: '1px solid #d1d5db', background: '#fff' }}>
+                  <option value="">Бекітпеу</option>
+                  {Array.from({ length: students.length }, (_, seat) => <option key={seat} value={seat + 1}>{seat + 1}-орын</option>)}
+                </select>
+              </div>
+            ))}
+          </div>
         </section>
 
         {/* 4 · Time and Date Settings (No sticky masks, standard time inputs) */}

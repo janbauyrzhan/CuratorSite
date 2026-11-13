@@ -9,7 +9,7 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  Plus, Trash2, Download, Copy, LogOut, GraduationCap, Users, Clock, Check, User, ArrowLeftRight, Shuffle, MessageCircle
+  Plus, Trash2, Download, Copy, LogOut, GraduationCap, Users, Clock, Check, User, ArrowLeftRight, Shuffle, MessageCircle, Lock, Unlock
 } from 'lucide-react';
 import AuthPanel     from './AuthPanel';
 import WorkspaceHome from './WorkspaceHome';
@@ -190,6 +190,7 @@ export default function App() {
   const [weekIdx,        setWeekIdx]        = useState(0);
   const [schedule,       setSchedule]       = useState([]);
   const [pairOverrides,  setPairOverrides]  = useState({});
+  const [pinnedPairs, setPinnedPairs] = useState({});
   const [showSwapModal,  setShowSwapModal]  = useState(false);
   const [swapStudentA,   setSwapStudentA]   = useState('');
   const [swapStudentB,   setSwapStudentB]   = useState('');
@@ -224,7 +225,7 @@ export default function App() {
   const resetWorkspace = useCallback(() => {
     setGroups([]); setActiveGid(null); setRawTextPairs(''); setStudentsPairs([]);
     setCustomPairsOrder(null); setRawTextExam(''); setStudentsExam([]);
-    setSchedule([]); setPairOverrides({}); setWeekIdx(0); setDivType('mixed');
+    setSchedule([]); setPairOverrides({}); setPinnedPairs({}); setWeekIdx(0); setDivType('mixed');
   }, []);
 
   const hydrateWorkspace = useCallback(async (authUser) => {
@@ -254,6 +255,7 @@ export default function App() {
       setRawTextExam(selectedGroup?.rawTextExam || '');
       setStudentsExam(selectedGroup?.students_exam || []);
       setPairOverrides(selectedGroup?.pairOverrides || {});
+      setPinnedPairs(selectedGroup?.pinnedPairs || {});
     };
 
     setCloudHydrated(false);
@@ -440,6 +442,7 @@ export default function App() {
         customPairsOrder: null,
         genderMap: {},
         pairOverrides: {},
+        pinnedPairs: {},
         rawTextExam: '',
         students_exam: [],
       };
@@ -474,6 +477,7 @@ export default function App() {
       customPairsOrder: null,
       genderMap: {},
       pairOverrides: {},
+      pinnedPairs: {},
       rawTextExam: '',
       students_exam: [],
     };
@@ -487,6 +491,7 @@ export default function App() {
     setStudentsPairs([]);
     setCustomPairsOrder(null);
     setPairOverrides({});
+    setPinnedPairs({});
     setRawTextExam('');
     setStudentsExam([]);
     setWeekIdx(0);
@@ -502,6 +507,7 @@ export default function App() {
     setRawTextPairs(ng?.rawTextPairs || '');
     setStudentsPairs(ng?.students_pairs || []);
     setPairOverrides(ng?.pairOverrides || {});
+    setPinnedPairs(ng?.pinnedPairs || {});
     setRawTextExam(ng?.rawTextExam || '');
     setStudentsExam(ng?.students_exam || []);
     setWeekIdx(0);
@@ -518,6 +524,7 @@ export default function App() {
     setRawTextExam(g.rawTextExam || '');
     setStudentsExam(g.students_exam || []);
     setPairOverrides(g.pairOverrides || {});
+    setPinnedPairs(g.pinnedPairs || {});
     setWeekIdx(0);
     setShowSwapModal(false);
   }
@@ -543,6 +550,7 @@ export default function App() {
           customPairsOrder: customPairsOrder || null,
           genderMap: updatedMap,
           pairOverrides,
+          pinnedPairs,
           // students_exam and rawTextExam are NOT touched here
         };
       }
@@ -597,6 +605,7 @@ export default function App() {
     setCustomPairsOrder(null);
     setWeekIdx(0);
     setPairOverrides({});
+    setPinnedPairs({});
 
     if (activeGid) {
       const updatedMap = { ...existingGenders };
@@ -604,7 +613,7 @@ export default function App() {
         updatedMap[s.name.trim().toLowerCase()] = normalizeGender(s.gender);
       });
       setGroups(prev => prev.map(g => g.id === activeGid
-        ? { ...g, rawTextPairs: text, students_pairs: parsed, customPairsOrder: null, genderMap: updatedMap, pairOverrides: {} }
+        ? { ...g, rawTextPairs: text, students_pairs: parsed, customPairsOrder: null, genderMap: updatedMap, pairOverrides: {}, pinnedPairs: {} }
         : g
       ));
     }
@@ -673,20 +682,48 @@ export default function App() {
       notify('Оқушылар тізімі бос');
       return;
     }
-    const shuffled = [...studentsPairs].sort(() => Math.random() - 0.5).map(s => s.id);
-    setCustomPairsOrder(shuffled);
-    setPairOverrides({});
+    const pins = pinnedPairs[safeWeek] || {};
+    const fixedRows = Object.entries(pins).map(([row, ids]) => [Number(row), ids.map(id => studentsPairs.find(s => s.id === id)).filter(Boolean)]).filter(([, pair]) => pair.length === 2);
+    const fixedIds = new Set(fixedRows.flatMap(([, pair]) => pair.map(s => s.id)));
+    const movable = studentsPairs.filter(s => !fixedIds.has(s.id));
+    const usedBefore = new Set((schedule || []).filter((_, i) => i !== safeWeek).flatMap(week => week.map(pair => pair.length === 2 ? [pair[0].id < pair[1].id ? `${pair[0].id}|${pair[1].id}` : `${pair[1].id}|${pair[0].id}`] : [])));
+    let best = null;
+    let bestScore = Infinity;
+    for (let attempt = 0; attempt < 100; attempt++) {
+      const shuffled = [...movable];
+      for (let i = shuffled.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]]; }
+      const rows = Array.from({ length: Math.ceil(studentsPairs.length / 2) }, () => null);
+      fixedRows.forEach(([row, pair]) => { if (row < rows.length) rows[row] = pair; });
+      let cursor = 0;
+      for (let row = 0; row < rows.length; row++) if (!rows[row]) rows[row] = shuffled.slice(cursor, cursor += 2);
+      const score = rows.reduce((sum, pair) => pair.length === 2 ? sum + (usedBefore.has(pair[0].id < pair[1].id ? `${pair[0].id}|${pair[1].id}` : `${pair[1].id}|${pair[0].id}`) ? 1 : 0) : sum, 0);
+      if (score < bestScore) { best = rows; bestScore = score; }
+      if (score === 0) break;
+    }
+    const nextOverrides = { ...pairOverrides, [safeWeek]: best || [] };
+    setPairOverrides(nextOverrides);
+    setCustomPairsOrder(null);
     if (activeGid) {
-      setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, customPairsOrder: shuffled, pairOverrides: {} } : g));
+      setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, customPairsOrder: null, pairOverrides: nextOverrides, pinnedPairs } : g));
     }
     notify('🎲 Оқушылар кездейсоқ ретпен қайта бөлінді!');
-  }, [studentsPairs, activeGid, notify]);
+  }, [studentsPairs, activeGid, notify, pinnedPairs, safeWeek, schedule, pairOverrides]);
+
+  function togglePinnedPair(row, pair) {
+    const next = { ...pinnedPairs, [safeWeek]: { ...(pinnedPairs[safeWeek] || {}) } };
+    if (next[safeWeek][row]) delete next[safeWeek][row];
+    else next[safeWeek][row] = pair.filter(s => s && s.id !== '__bye__').map(s => s.id);
+    setPinnedPairs(next);
+    if (activeGid) setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, pinnedPairs: next } : g));
+    notify(next[safeWeek][row] ? 'Жұп осы аптаға бекітілді ✓' : 'Жұп бекітуден алынды');
+  }
 
   const resetPairsOrder = useCallback(() => {
     setCustomPairsOrder(null);
     setPairOverrides({});
+    setPinnedPairs({});
     if (activeGid) {
-      setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, customPairsOrder: null, pairOverrides: {} } : g));
+      setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, customPairsOrder: null, pairOverrides: {}, pinnedPairs: {} } : g));
     }
     notify('Тізім реті қалпына келтірілді');
   }, [activeGid, notify]);
@@ -907,7 +944,8 @@ export default function App() {
     setCustomPairsOrder(selectedGroup?.customPairsOrder || null);
     setRawTextExam(selectedGroup?.rawTextExam || '');
     setStudentsExam(selectedGroup?.students_exam || []);
-    setPairOverrides(selectedGroup?.pairOverrides || {});
+      setPairOverrides(selectedGroup?.pairOverrides || {});
+      setPinnedPairs(selectedGroup?.pinnedPairs || {});
     setLegacyWorkspaces([]);
     setSyncState('saved');
     notify('Осы браузердегі топтар аккаунтыңызға көшірілді ✓');
@@ -1812,8 +1850,11 @@ export default function App() {
                             fontSize: '11px',
                           }}
                         >
-                          <div style={{ fontWeight: 800, color: BRAND, marginBottom: '4px', fontSize: '10px' }}>
-                            {pIdx + 1}-ЖҰП
+                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 800, color: BRAND, marginBottom: '4px', fontSize: '10px' }}>
+                            <span>{pIdx + 1}-ЖҰП</span>
+                            <button type="button" onClick={() => togglePinnedPair(pIdx, pair)} disabled={isBye1 || isBye2} title={pinnedPairs[safeWeek]?.[pIdx] ? 'Жұпты бекітуден алу' : 'Осы жұпты бекіту'} style={{ border: 0, background: 'transparent', color: pinnedPairs[safeWeek]?.[pIdx] ? '#b45309' : '#64748b', cursor: isBye1 || isBye2 ? 'not-allowed' : 'pointer', padding: '2px' }}>
+                              {pinnedPairs[safeWeek]?.[pIdx] ? <Lock size={13} /> : <Unlock size={13} />}
+                            </button>
                           </div>
                           <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
                             <div
