@@ -9,11 +9,12 @@
 
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
-  Plus, Trash2, Download, Copy, LogOut, GraduationCap, Users, Clock, Check, User, ArrowLeftRight, Shuffle, MessageCircle, Lock, Unlock
+  Plus, Trash2, Download, Copy, LogOut, GraduationCap, Users, Clock, Check, User, Shuffle, MessageCircle, ChevronDown, RotateCcw
 } from 'lucide-react';
 import AuthPanel     from './AuthPanel';
 import WorkspaceHome from './WorkspaceHome';
 import Poster        from './Poster';
+import PosterReorder, { PosterLock } from './PosterReorder';
 import ExamScheduler from './ExamScheduler';
 import WeeklyPlanner from './WeeklyPlanner';
 import {readPlanDrafts,writePlanDraft,mergePlanDrafts,acknowledgePlanDrafts} from '@/lib/planDrafts';
@@ -191,9 +192,7 @@ export default function App() {
   const [schedule,       setSchedule]       = useState([]);
   const [pairOverrides,  setPairOverrides]  = useState({});
   const [pinnedPairs, setPinnedPairs] = useState({});
-  const [showSwapModal,  setShowSwapModal]  = useState(false);
-  const [swapStudentA,   setSwapStudentA]   = useState('');
-  const [swapStudentB,   setSwapStudentB]   = useState('');
+  const [showPairSettings, setShowPairSettings] = useState(false);
 
   /* ── SVG Template Content (Pairs) ───────────────────────── */
   const [svgTemplate, setSvgTemplate] = useState(RAW_SVG_TEMPLATE);
@@ -397,28 +396,6 @@ export default function App() {
   const weekText    = `${safeWeek + 1}-апта`;
   const subjectText = activeGroup?.subject || activeGroup?.name || 'Жұптық жұмыс';
 
-  /* ── Options for Student Swapping ───────────────────────── */
-  const swapOptions = useMemo(() => {
-    const list = [];
-    currentPairs.forEach((pair, rIdx) => {
-      if (pair[0] && pair[0].id !== '__bye__') {
-        list.push({
-          id: pair[0].id,
-          label: `${rIdx + 1}-жұп (1): ${pair[0].name}`,
-          name: pair[0].name,
-        });
-      }
-      if (pair[1] && pair[1].id !== '__bye__') {
-        list.push({
-          id: pair[1].id,
-          label: `${rIdx + 1}-жұп (2): ${pair[1].name}`,
-          name: pair[1].name,
-        });
-      }
-    });
-    return list;
-  }, [currentPairs]);
-
   /* ── Real-Time Dynamic SVG Generation (Pairs) ───────────── */
   const filledSvg = useMemo(() => {
     return fillSvgTemplate(svgTemplate, {
@@ -430,13 +407,32 @@ export default function App() {
   }, [svgTemplate, weekText, subjectText, currentPairs]);
 
   const pairPosterHeight = Number(filledSvg.match(/viewBox="0 0 1702 ([\d.]+)"/)?.[1]) || 988;
-  const pairLockControls = currentPairs.map((pair, pIdx) => {
-    const pinned = Boolean(pinnedPairs[safeWeek]?.[pIdx]);
-    const y = ROW_CENTERS[pIdx] ?? 949;
-    return <button key={`poster-pair-lock-${pIdx}`} type="button" onClick={() => togglePinnedPair(pIdx, pair)} disabled={!pair?.[0] || !pair?.[1] || pair[0].id === '__bye__' || pair[1].id === '__bye__'} aria-label={`${pIdx + 1}-жұп: ${pinned ? 'бекітуден алу' : 'бекіту'}`} aria-pressed={pinned} title={pinned ? 'Бұл жұп осы аптаға бекітілген' : 'Осы жұпты бекіту'} style={{ position: 'absolute', left: `${(850 / 1702) * 100}%`, top: `${(y / pairPosterHeight) * 100}%`, transform: 'translate(-50%, -50%)', width: '26px', height: '26px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', border: `1px solid ${pinned ? '#f59e0b' : '#cbd5e1'}`, background: pinned ? '#fef3c7' : '#fff', color: pinned ? '#b45309' : '#64748b', cursor: 'pointer', boxShadow: '0 1px 4px rgba(15,23,42,.2)', zIndex: 3, pointerEvents: 'auto' }}>
-      {pinned ? <Lock size={14} /> : <Unlock size={14} />}
-    </button>;
+  const pairRows = currentPairs.slice(0, ROW_CENTERS.length).flatMap((pair, index) => {
+    const locked = Boolean(pinnedPairs[safeWeek]?.[index]);
+    const y = ROW_CENTERS[index] / pairPosterHeight * 100;
+    const students = pair.flatMap((student, column) => {
+      if (!student || student.id === '__bye__') return [];
+      return [{
+        id: student.id,
+        name: student.name,
+        locked,
+        position: { left: column === 0 ? '15.4%' : '65.9%', top: `${y}%`, width: '17.4%', height: `${36 / pairPosterHeight * 100}%` },
+      }];
+    });
+    if (!students.length) return [];
+    return [{
+      key: index,
+      label: `${index + 1}-жұп`,
+      students,
+      lock: students.length === 2 ? {
+        locked,
+        label: `${index + 1}-жұп: ${locked ? 'бекітуден алу' : 'бекіту'}`,
+        onClick: () => togglePinnedPair(index, pair),
+        style: { left: '50%', top: `${y}%` },
+      } : null,
+    }];
   });
+  const pairLockControls = pairRows.map(row => row.lock && <PosterLock key={row.key} {...row.lock} />);
 
   /* ══ DEMO ONBOARDING ACTION (Pairs only, scoped to active group) ══ */
   function insertDemoData() {
@@ -535,7 +531,7 @@ export default function App() {
     setPairOverrides(g.pairOverrides || {});
     setPinnedPairs(g.pinnedPairs || {});
     setWeekIdx(0);
-    setShowSwapModal(false);
+    setShowPairSettings(false);
   }
 
   /* ══ SAVE «ЖҰПТЫҚ ЖҰМЫС» SETTINGS ONLY ════════════════════ */
@@ -640,7 +636,11 @@ export default function App() {
   /* ══ EXAM STUDENT INPUT & PARSER ════════════════════════════ */
   // Парсер ВСЕГДА stripPhones: true — только чистые имена
   function applyTextExam(text) {
-    const parsed = parseStudents(text, { stripPhones: true }); // phones stripped
+    const idsByName = new Map(studentsExam.map(student => [student.name.toLowerCase(), student.id]));
+    const parsed = parseStudents(text, { stripPhones: true }).map(student => ({
+      ...student,
+      id: idsByName.get(student.name.toLowerCase()) || student.id,
+    }));
     setStudentsExam(parsed);
     if (activeGid) {
       setGroups(prev => prev.map(g => g.id === activeGid
@@ -737,135 +737,40 @@ export default function App() {
     notify('Тізім реті қалпына келтірілді');
   }, [activeGid, notify]);
 
-  /* ══ MANUAL PAIR SWAP HANDLERS ══════════════════════════════ */
-  function handleSwapStudents() {
-    if (!swapStudentA || !swapStudentB) {
-      notify('Ауыстыру үшін екі оқушыны таңдаңыз');
-      return;
-    }
-    if (swapStudentA === swapStudentB) {
-      notify('Бірдей оқушыны таңдау мүмкін емес');
-      return;
-    }
-
-    const pairsCopy = currentPairs.map(p => [...p]);
-    let posA = null;
-    let posB = null;
-
-    for (let r = 0; r < pairsCopy.length; r++) {
-      for (let c = 0; c < pairsCopy[r].length; c++) {
-        if (pairsCopy[r][c]?.id === swapStudentA) {
-          posA = { r, c };
-        }
-        if (pairsCopy[r][c]?.id === swapStudentB) {
-          posB = { r, c };
-        }
-      }
-    }
-
-    if (!posA || !posB) {
-      notify('Таңдалған оқушылар табылған жоқ');
-      return;
-    }
-
-    const temp = pairsCopy[posA.r][posA.c];
-    pairsCopy[posA.r][posA.c] = pairsCopy[posB.r][posB.c];
-    pairsCopy[posB.r][posB.c] = temp;
-
-    const nextOverrides = {
-      ...pairOverrides,
-      [safeWeek]: pairsCopy,
-    };
-    setPairOverrides(nextOverrides);
-
-    if (activeGid) {
-      setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, pairOverrides: nextOverrides } : g));
-    }
-
-    const nameA = temp.name;
-    const nameB = pairsCopy[posA.r][posA.c]?.name;
-    setSwapStudentA('');
-    setSwapStudentB('');
-    notify(`✓ ${nameA} және ${nameB} орындары ауыстырылды!`);
+  function notifyLockedPair() {
+    notify('Орын ауыстыру үшін алдымен жұптың құлпын ашыңыз');
   }
 
-  function handlePairTogether() {
-    if (!swapStudentA || !swapStudentB) {
-      notify('Бір жұпқа қою үшін екі оқушыны таңдаңыз');
+  function swapPairStudents(firstId, secondId) {
+    const firstRow = currentPairs.findIndex(pair => pair.some(student => student.id === firstId));
+    const secondRow = currentPairs.findIndex(pair => pair.some(student => student.id === secondId));
+    if (firstRow < 0 || secondRow < 0 || firstId === secondId) return;
+    if (pinnedPairs[safeWeek]?.[firstRow] || pinnedPairs[safeWeek]?.[secondRow]) {
+      notifyLockedPair();
       return;
     }
-    if (swapStudentA === swapStudentB) {
-      notify('Бірдей оқушыны таңдау мүмкін емес');
-      return;
-    }
-
-    const pairsCopy = currentPairs.map(p => [...p]);
-    let posA = null;
-    let posB = null;
-
-    for (let r = 0; r < pairsCopy.length; r++) {
-      for (let c = 0; c < pairsCopy[r].length; c++) {
-        if (pairsCopy[r][c]?.id === swapStudentA) posA = { r, c };
-        if (pairsCopy[r][c]?.id === swapStudentB) posB = { r, c };
-      }
-    }
-
-    if (!posA || !posB) {
-      notify('Таңдалған оқушылар табылған жоқ');
-      return;
-    }
-
-    if (posA.r === posB.r) {
-      notify('Бұл екі оқушы қазірдің өзінде бір жұпта!');
-      return;
-    }
-
-    const studentA = pairsCopy[posA.r][posA.c];
-    const partnerA = pairsCopy[posA.r][1 - posA.c] || null;
-    const studentB = pairsCopy[posB.r][posB.c];
-    const partnerB = pairsCopy[posB.r][1 - posB.c] || null;
-
-    // Put studentA and studentB together into target row posA.r
-    pairsCopy[posA.r] = [studentA, studentB];
-
-    // Put their former partners into posB.r
-    if (partnerA && partnerB) {
-      pairsCopy[posB.r] = [partnerA, partnerB];
-    } else if (partnerA) {
-      pairsCopy[posB.r] = [partnerA];
-    } else if (partnerB) {
-      pairsCopy[posB.r] = [partnerB];
-    } else {
-      pairsCopy[posB.r] = [];
-    }
-
-    const nextOverrides = {
-      ...pairOverrides,
-      [safeWeek]: pairsCopy,
-    };
-    setPairOverrides(nextOverrides);
-
-    if (activeGid) {
-      setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, pairOverrides: nextOverrides } : g));
-    }
-
-    const nameA = studentA.name;
-    const nameB = studentB.name;
-    setSwapStudentA('');
-    setSwapStudentB('');
-    notify(`✓ ${nameA} және ${nameB} осы аптада бір жұпқа қойылды!`);
+    const first = currentPairs[firstRow].find(student => student.id === firstId);
+    const second = currentPairs[secondRow].find(student => student.id === secondId);
+    const next = currentPairs.map(pair => pair.map(student => {
+      if (student.id === firstId) return second;
+      if (student.id === secondId) return first;
+      return student;
+    }));
+    const overrides = { ...pairOverrides, [safeWeek]: next };
+    setPairOverrides(overrides);
+    setGroups(gs => gs.map(group => group.id === activeGid ? { ...group, pairOverrides: overrides } : group));
+    notify('Оқушылардың орындары ауыстырылды');
   }
 
-  function handleResetWeekSwaps() {
-    const nextOverrides = { ...pairOverrides };
-    delete nextOverrides[safeWeek];
-    setPairOverrides(nextOverrides);
-    if (activeGid) {
-      setGroups(gs => gs.map(g => g.id === activeGid ? { ...g, pairOverrides: nextOverrides } : g));
+  function resetPairWeek() {
+    if (Object.keys(pinnedPairs[safeWeek] || {}).length) {
+      notify('Бастапқы ретке қайтару үшін бекітілген жұптарды босатыңыз');
+      return;
     }
-    setSwapStudentA('');
-    setSwapStudentB('');
-    notify(`${safeWeek + 1}-апта бастапқы алгоритмге қайтарылды ✓`);
+    const overrides = { ...pairOverrides };
+    delete overrides[safeWeek];
+    setPairOverrides(overrides);
+    setGroups(gs => gs.map(group => group.id === activeGid ? { ...group, pairOverrides: overrides } : group));
   }
 
   /* ══ EXPORT ACTIONS (Pairs) ═════════════════════════════════ */
@@ -888,7 +793,7 @@ export default function App() {
     // Strict TSV: {Имя1}\t{Телефон1}\t{Имя2}\t{Телефон2}
     // For odd lone student: {Имя}\t{Телефон}\t\t
     navigator.clipboard.writeText(pairsToTSV(currentPairs))
-      .then(() => notify('Excel / Google Таблица үшін көшірілді! (Ctrl+V → 4 бағана)'))
+      .then(() => notify('Excel немесе Google Sheets үшін көшірілді! (Ctrl+V → 4 бағана)'))
       .catch(() => notify('Көшіру қатесі орын алды'));
   }
 
@@ -1119,7 +1024,7 @@ export default function App() {
         <WorkspaceHome username={user?.username} onSelect={tab=>{if(tab==='plan')setPlanSubject(null);setActiveTab(tab);}} />
       ) : activeTab === 'pairs' ? (
         /* ════ TAB 1: «ЖҰПТЫҚ ЖҰМЫС» PAIRS GENERATOR ═══════════ */
-        <div className="pair-workspace" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
+        <div className="pair-workspace pairs-layout" style={{ flex: 1, display: 'flex', overflow: 'hidden' }}>
 
           {/* ════ LEFT PANEL: Settings & Student List ═══════════ */}
           <aside className="workspace-sidebar" style={{
@@ -1129,6 +1034,11 @@ export default function App() {
             display: 'flex', flexDirection: 'column', gap: '18px',
           }}>
 
+            <button type="button" className="pairs-settings-toggle" aria-expanded={showPairSettings}
+              aria-controls="pairs-settings" onClick={() => setShowPairSettings(open => !open)}>
+              <Users size={16} /> Жұп баптаулары <ChevronDown size={15} />
+            </button>
+            <div id="pairs-settings" className={showPairSettings ? 'pairs-settings is-open' : 'pairs-settings'}>
             {/* 1 · Save Button (Prominent with visual confirmation) */}
             <section>
               <button
@@ -1277,7 +1187,7 @@ export default function App() {
                         'Тізімді кез-келген форматта қойыңыз:\n\n' +
                         'Болатұлы Нұрдәулет 87754615707\n' +
                         'Еркинжан Каусар 87086898257\n\n' +
-                        'Немесе сплошной мәтінмен:\n' +
+                        'Немесе тұтас мәтінмен:\n' +
                         'Болатұлы Нұрдәулет87754615707Еркинжан Каусар87086898257...\n\n' +
                         'Немесе «Үлгіні қою» батырмасын басыңыз!'
                       }
@@ -1530,6 +1440,7 @@ export default function App() {
                 )}
               </div>
             </section>
+            </div>
           </aside>
 
           {/* ════ RIGHT PANEL: Real-Time Canva SVG Live Poster ════ */}
@@ -1563,13 +1474,13 @@ export default function App() {
                     </div>
                     <div style={{ fontSize: '13px', color: '#4b5563', lineHeight: 1.6, fontWeight: 500 }}>
                       <div>1. Жаңа топ құрыңыз немесе таңдаңыз</div>
-                      <div>2. Оқушылар тізімін сплошной мәтін ретінде қойыңыз</div>
+                      <div>2. Оқушылар тізімін тұтас мәтін ретінде қойыңыз</div>
                       <div>3. Аптасын таңдап, дайын постерді PNG түрінде жүктеп алыңыз</div>
                     </div>
                   </div>
                 </div>
                 <Btn variant="primary" size="sm" onClick={insertDemoData} sx={{ flexShrink: 0, padding: '8px 14px' }}>
-                  <Plus size={14} />Үлгіні қою (Демо 28 оқушы)
+                  <Plus size={14} />Үлгіні қою (28 оқушы)
                 </Btn>
               </div>
             )}
@@ -1591,19 +1502,11 @@ export default function App() {
                 <Copy size={14} />Тізімді көшіру (Excel)
               </Btn>
 
-              {/* 4. Manual Pair Adjustment / Swap Toggle Button */}
-              <Btn
-                variant="ghost"
-                onClick={() => setShowSwapModal(v => !v)}
-                sx={{
-                  background: showSwapModal ? '#eff0ff' : '#ffffff',
-                  borderColor: showSwapModal ? BRAND : (pairOverrides[safeWeek] ? '#f59e0b' : '#e5e7eb'),
-                  color: showSwapModal ? BRAND : (pairOverrides[safeWeek] ? '#b45309' : '#374151'),
-                  fontWeight: 700,
-                }}
-              >
-                <ArrowLeftRight size={14} /> Осы аптадағы жұптарды өзгерту / Своп {pairOverrides[safeWeek] ? '(Өзгертілген)' : ''}
-              </Btn>
+              {weekOverride && (
+                <Btn variant="ghost" onClick={resetPairWeek}>
+                  <RotateCcw size={14} /> Аптаны қалпына келтіру
+                </Btn>
+              )}
 
               <div style={{ flex: 1 }} />
 
@@ -1637,291 +1540,11 @@ export default function App() {
               )}
             </div>
 
-            {/* Manual Swap Panel */}
-            {showSwapModal && (
-              <div style={{
-                width: '100%', maxWidth: '1020px',
-                background: '#ffffff', border: '1.5px solid #c7d2fe', borderRadius: '14px',
-                padding: '16px 20px',
-                boxShadow: '0 4px 16px rgba(54,64,151,0.08)',
-                display: 'flex', flexDirection: 'column', gap: '14px'
-              }}>
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '8px' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                    <div style={{
-                      width: '32px', height: '32px', borderRadius: '8px',
-                      background: '#eff0ff', color: BRAND, display: 'flex', alignItems: 'center', justifyContent: 'center'
-                    }}>
-                      <ArrowLeftRight size={16} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: '14px', fontWeight: 800, color: '#111827' }}>
-                        {safeWeek + 1}-аптадағы жұптарды қолмен реттеу (Своп)
-                      </div>
-                      <div style={{ fontSize: '12px', color: '#6b7280' }}>
-                        Кез келген екі оқушыны таңдап, орындарын бірден ауыстырыңыз. Постер мен тізім лезде жаңарады.
-                      </div>
-                    </div>
-                  </div>
-
-                  {pairOverrides[safeWeek] && (
-                    <button
-                      type="button"
-                      onClick={handleResetWeekSwaps}
-                      style={{
-                        padding: '6px 12px',
-                        background: '#fef2f2',
-                        border: '1px solid #fecaca',
-                        borderRadius: '7px',
-                        color: '#dc2626',
-                        fontSize: '12px',
-                        fontWeight: 700,
-                        cursor: 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '5px'
-                      }}
-                    >
-                      ↺ Бастапқы алгоритмге қайтару
-                    </button>
-                  )}
-                </div>
-
-                {/* Selectors and Action */}
-                <div style={{
-                  display: 'grid',
-                  gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                  gap: '12px',
-                  alignItems: 'end',
-                  background: '#f8fafc',
-                  padding: '12px 14px',
-                  borderRadius: '10px',
-                  border: '1px solid #e2e8f0'
-                }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#4b5563', marginBottom: '4px' }}>
-                      1-ОҚУШЫНЫ ТАҢДАҢЫЗ:
-                    </label>
-                    <select
-                      value={swapStudentA}
-                      onChange={e => setSwapStudentA(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 10px',
-                        borderRadius: '7px',
-                        border: '1.5px solid #cbd5e1',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        color: '#1e293b',
-                        background: '#ffffff',
-                        outline: 'none'
-                      }}
-                    >
-                      <option value="">-- Бірінші оқушыны таңдаңыз --</option>
-                      {swapOptions.map(opt => (
-                        <option key={`a-${opt.id}`} value={opt.id} disabled={opt.id === swapStudentB}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div>
-                    <label style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#4b5563', marginBottom: '4px' }}>
-                      2-ОҚУШЫНЫ ТАҢДАҢЫЗ:
-                    </label>
-                    <select
-                      value={swapStudentB}
-                      onChange={e => setSwapStudentB(e.target.value)}
-                      style={{
-                        width: '100%',
-                        padding: '8px 10px',
-                        borderRadius: '7px',
-                        border: '1.5px solid #cbd5e1',
-                        fontSize: '13px',
-                        fontWeight: 600,
-                        color: '#1e293b',
-                        background: '#ffffff',
-                        outline: 'none'
-                      }}
-                    >
-                      <option value="">-- Екінші оқушыны таңдаңыз --</option>
-                      {swapOptions.map(opt => (
-                        <option key={`b-${opt.id}`} value={opt.id} disabled={opt.id === swapStudentA}>
-                          {opt.label}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
-
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <button
-                      type="button"
-                      onClick={handlePairTogether}
-                      disabled={!swapStudentA || !swapStudentB || swapStudentA === swapStudentB}
-                      title="Таңдалған екі оқушыны бір жұпқа қою (қалған серіктестері бір-бірімен жұптасады)"
-                      style={{
-                        height: '38px',
-                        padding: '0 16px',
-                        background: (!swapStudentA || !swapStudentB || swapStudentA === swapStudentB) ? '#94a3b8' : '#059669',
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '7px',
-                        fontSize: '13px',
-                        fontWeight: 800,
-                        cursor: (!swapStudentA || !swapStudentB || swapStudentA === swapStudentB) ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        transition: 'background 0.15s ease'
-                      }}
-                    >
-                      🤝 Бір жұпқа қою (Бірге)
-                    </button>
-
-                    <button
-                      type="button"
-                      onClick={handleSwapStudents}
-                      disabled={!swapStudentA || !swapStudentB || swapStudentA === swapStudentB}
-                      title="Таңдалған екі оқушының орындарын ауыстыру"
-                      style={{
-                        height: '38px',
-                        padding: '0 16px',
-                        background: (!swapStudentA || !swapStudentB || swapStudentA === swapStudentB) ? '#94a3b8' : BRAND,
-                        color: '#ffffff',
-                        border: 'none',
-                        borderRadius: '7px',
-                        fontSize: '13px',
-                        fontWeight: 800,
-                        cursor: (!swapStudentA || !swapStudentB || swapStudentA === swapStudentB) ? 'not-allowed' : 'pointer',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: '6px',
-                        transition: 'background 0.15s ease'
-                      }}
-                    >
-                      <ArrowLeftRight size={15} /> Орындарын ауыстыру (Своп)
-                    </button>
-                  </div>
-                </div>
-
-                <div style={{ fontSize: '11px', color: '#64748b', background: '#f1f5f9', padding: '6px 10px', borderRadius: '6px' }}>
-                  💡 <b>Маңызды:</b> Бұл түзетулер <b>ТЕК ОСЫ АПТАҒА ({safeWeek + 1}-апта)</b> сақталады. Басқа апталар өзгермейді және жалпы алгоритм бұзылмайды.
-                </div>
-
-                {/* Quick Interactive Pairs Overview */}
-                <div>
-                  <div style={{ fontSize: '11px', fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
-                    Ағымдағы жұптар (жылдам таңдау үшін оқушыны басыңыз):
-                  </div>
-                  <div style={{
-                    display: 'grid',
-                    gridTemplateColumns: 'repeat(auto-fill, minmax(210px, 1fr))',
-                    gap: '8px',
-                    maxHeight: '220px',
-                    overflowY: 'auto',
-                    padding: '2px'
-                  }}>
-                    {currentPairs.map((pair, pIdx) => {
-                      const s1 = pair[0];
-                      const s2 = pair[1];
-                      const isBye1 = !s1 || s1.id === '__bye__';
-                      const isBye2 = !s2 || s2.id === '__bye__';
-
-                      const isSelected1 = s1 && (swapStudentA === s1.id || swapStudentB === s1.id);
-                      const isSelected2 = s2 && (swapStudentA === s2.id || swapStudentB === s2.id);
-
-                      const selectClick = (id) => {
-                        if (!id || id === '__bye__') return;
-                        if (!swapStudentA) {
-                          setSwapStudentA(id);
-                        } else if (!swapStudentB && swapStudentA !== id) {
-                          setSwapStudentB(id);
-                        } else if (swapStudentA === id) {
-                          setSwapStudentA('');
-                        } else if (swapStudentB === id) {
-                          setSwapStudentB('');
-                        } else {
-                          setSwapStudentB(id);
-                        }
-                      };
-
-                      return (
-                        <div
-                          key={`pair-box-${pIdx}`}
-                          style={{
-                            background: '#f8fafc',
-                            border: '1px solid #e2e8f0',
-                            borderRadius: '8px',
-                            padding: '6px 8px',
-                            fontSize: '11px',
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontWeight: 800, color: BRAND, marginBottom: '4px', fontSize: '10px' }}>
-                            <span>{pIdx + 1}-ЖҰП</span>
-                            <button type="button" onClick={() => togglePinnedPair(pIdx, pair)} disabled={isBye1 || isBye2} title={pinnedPairs[safeWeek]?.[pIdx] ? 'Жұпты бекітуден алу' : 'Осы жұпты бекіту'} style={{ border: 0, background: 'transparent', color: pinnedPairs[safeWeek]?.[pIdx] ? '#b45309' : '#64748b', cursor: isBye1 || isBye2 ? 'not-allowed' : 'pointer', padding: '2px' }}>
-                              {pinnedPairs[safeWeek]?.[pIdx] ? <Lock size={13} /> : <Unlock size={13} />}
-                            </button>
-                          </div>
-                          <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                            <div
-                              onClick={() => !isBye1 && selectClick(s1.id)}
-                              style={{
-                                padding: '3px 6px',
-                                borderRadius: '4px',
-                                background: isSelected1 ? '#dbeafe' : '#ffffff',
-                                border: isSelected1 ? `1.5px solid ${BRAND}` : '1px solid #e2e8f0',
-                                fontWeight: isSelected1 ? 800 : 600,
-                                color: isBye1 ? '#94a3b8' : '#1e293b',
-                                cursor: isBye1 ? 'default' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                              }}
-                            >
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {isBye1 ? '—' : `${s1.gender === 'girl' ? '👧' : '👦'} ${s1.name}`}
-                              </span>
-                              {isSelected1 && <span style={{ fontSize: '9px', color: BRAND, fontWeight: 900 }}>✓</span>}
-                            </div>
-                            <div
-                              onClick={() => !isBye2 && selectClick(s2.id)}
-                              style={{
-                                padding: '3px 6px',
-                                borderRadius: '4px',
-                                background: isSelected2 ? '#dbeafe' : '#ffffff',
-                                border: isSelected2 ? `1.5px solid ${BRAND}` : '1px solid #e2e8f0',
-                                fontWeight: isSelected2 ? 800 : 600,
-                                color: isBye2 ? '#94a3b8' : '#1e293b',
-                                cursor: isBye2 ? 'default' : 'pointer',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                              }}
-                            >
-                              <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                                {isBye2 ? '—' : `${s2.gender === 'girl' ? '👧' : '👦'} ${s2.name}`}
-                              </span>
-                              {isSelected2 && <span style={{ fontSize: '9px', color: BRAND, fontWeight: 900 }}>✓</span>}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-            )}
-
-            {/* SVG Live Poster Preview */}
-            <div style={{ width: '100%', maxWidth: '1020px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <div style={{ fontSize: '12px', color: '#64748b' }}>Нажмите 🔓 между именами пары, чтобы закрепить её на эту неделю. Значки не попадут в скачанный постер.</div>
-              <div style={{ position: 'relative', width: '100%' }}>
+            <div className="poster-workspace">
+              <p className="poster-instructions">Оқушыны басқа оқушының орнына сүйреңіз немесе екі есімді кезекпен басыңыз. Жұпты осы аптаға бекіту үшін 🔓 белгісін басыңыз. Құлыптар PNG файлында көрінбейді.</p>
+              <PosterReorder key={`${activeGid}:${safeWeek}`} rows={pairRows} onSwap={swapPairStudents} onLocked={notifyLockedPair} locks={pairLockControls}>
                 <Poster svgString={filledSvg} />
-                <div aria-label="Закрепление пар на постере" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>{pairLockControls}</div>
-              </div>
+              </PosterReorder>
             </div>
           </main>
         </div>
@@ -1950,7 +1573,6 @@ export default function App() {
           setRawText={setRawTextExam}
           applyText={applyTextExam}
           handleBlur={handleBlurExam}
-          insertDemoData={insertDemoData}
           activeGroup={activeGroup}
           onSaveGroup={handleSaveExamGroup}
           savedAnim={savedAnim}

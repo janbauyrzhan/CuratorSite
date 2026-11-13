@@ -7,13 +7,14 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react';
 import {
-  Download, Shuffle, Clock, Plus, Trash2, Check, ArrowLeftRight, MessageCircle, Lock, Unlock,
+  Download, Shuffle, Clock, Plus, Trash2, Check, MessageCircle,
   CalendarDays, ChevronDown, FolderOpen, Users, RotateCcw,
 } from 'lucide-react';
 import {
   fillSvgTemplate2, downloadSvg2AsPng, addMinutesToTime, RAW_SVG_TEMPLATE2, SLOT_NAME_Y,
 } from '@/lib/svgTemplate2';
 import { cleanStudentName } from '@/lib/utils';
+import PosterReorder, { PosterLock } from './PosterReorder';
 
 const BRAND = '#514fb1';
 
@@ -151,8 +152,6 @@ export default function ExamScheduler({
   const [customOrder, setCustomOrder]           = useState(null);
   const [activeTool, setActiveTool] = useState(null);
   const [showSettings, setShowSettings] = useState(false);
-  const [swapStudentA, setSwapStudentA]         = useState('');
-  const [swapStudentB, setSwapStudentB]         = useState('');
   const [slotOverrides, setSlotOverrides]       = useState(null);
   const [lockedSeats, setLockedSeats] = useState(activeGroup?.examSettings?.lockedSeats || {});
   const [individualTimes, setIndividualTimes] = useState(activeGroup?.examSettings?.individualTimes || {});
@@ -164,8 +163,6 @@ export default function ExamScheduler({
     setLockedSeats(activeGroup?.examSettings?.lockedSeats || {});
     setCustomOrder(activeGroup?.examSettings?.customOrder || null);
     setIndividualTimes(activeGroup?.examSettings?.individualTimes || {});
-    setSwapStudentA('');
-    setSwapStudentB('');
   }, [activeGroup?.id]);
 
   // Auto-calculated Column 2 Start Time for single_day mode
@@ -221,19 +218,24 @@ export default function ExamScheduler({
     for (let i = 0; i < 16; i++) {
       const s1 = arranged[i * 2] || null;
       const s2 = arranged[i * 2 + 1] || null;
-      const individualIds = new Set(Object.keys(individualTimes || {}));
-      const pair = [s1, s2].filter(s => s && !individualIds.has(examStudentRuleKey(s, students)));
-      res.push(pair);
+      res.push([s1, s2].filter(Boolean));
     }
     return res;
-  }, [students, customOrder, lockedSeats, individualTimes]);
+  }, [students, customOrder, lockedSeats]);
 
-  /* ── Effective Slots (with manual overrides applied) ────── */
+  const arrangedSlots = useMemo(() => {
+    if (!slotOverrides?.length) return slots;
+    const roster = new Map(students.map(student => [student.id, student]));
+    const savedIds = slotOverrides.flat().map(student => student.id);
+    if (savedIds.length !== slots.flat().length || new Set(savedIds).size !== savedIds.length ||
+        savedIds.some(id => !roster.has(id))) return slots;
+    return slotOverrides.map(slot => slot.map(student => roster.get(student.id)));
+  }, [slots, slotOverrides, students]);
+
   const effectiveSlots = useMemo(() => {
-    if (!slotOverrides || slotOverrides.length === 0) return slots;
-    const individualIds = new Set(Object.keys(individualTimes || {}));
-    return slotOverrides.map(slot => slot.filter(student => !individualIds.has(examStudentRuleKey(student, students))));
-  }, [slots, slotOverrides, individualTimes, students]);
+    const individualIds = new Set(individualAppointments.map(({ student }) => student.id));
+    return arrangedSlots.map(slot => slot.filter(student => !individualIds.has(student.id)));
+  }, [arrangedSlots, individualAppointments]);
 
   /* ── Real-Time Dynamic SVG 2 Generation ─────────────────── */
   const filledSvg2 = useMemo(() => {
@@ -278,7 +280,7 @@ export default function ExamScheduler({
 
   function toggleStudentLockAtSeat(studentId, seatIndex) {
     const next = { ...lockedSeats };
-    if (Number(next[studentId]) === seatIndex) {
+    if (Object.hasOwn(next, studentId)) {
       delete next[studentId];
     } else {
       const occupant = Object.entries(next).find(([id, seat]) => id !== studentId && Number(seat) === seatIndex)?.[0];
@@ -296,8 +298,7 @@ export default function ExamScheduler({
     }
     const next = { ...individualTimes, [studentKey]: time };
     setIndividualTimes(next);
-    setSlotOverrides(null);
-    onSaveGroup?.({ ...(activeGroup?.examSettings || {}), individualTimes: next, slotOverrides: null });
+    onSaveGroup?.({ individualTimes: next });
     setIndividualStudentId('');
     notify('Жеке тапсыру уақыты сақталды ✓');
   }
@@ -310,70 +311,31 @@ export default function ExamScheduler({
     notify('Жеке уақыт алынып тасталды');
   }
 
-  /* ── Options for Student Swapping ───────────────────────── */
-  const swapOptions = useMemo(() => {
-    const list = [];
-    effectiveSlots.forEach((slot, sIdx) => {
-      slot.forEach((s, pos) => {
-        if (s && s.id) {
-          const col = sIdx < 8 ? '1-бағана' : '2-бағана';
-          const row = (sIdx % 8) + 1;
-          list.push({
-            id: s.id,
-            label: `${col}, ${row}-қатар: ${s.name}`,
-            name: s.name,
-          });
-        }
-      });
-    });
-    return list;
-  }, [effectiveSlots]);
-
-  /* ── Manual Swap Handler ────────────────────────────────── */
-  function handleSwapStudents() {
-    if (!swapStudentA || !swapStudentB) {
-      notify('Ауыстыру үшін екі оқушыны таңдаңыз');
-      return;
-    }
-    if (swapStudentA === swapStudentB) {
-      notify('Бірдей оқушыны таңдау мүмкін емес');
-      return;
-    }
-
-    const slotsCopy = effectiveSlots.map(slot => [...slot]);
-    let posA = null;
-    let posB = null;
-
-    for (let r = 0; r < slotsCopy.length; r++) {
-      for (let c = 0; c < slotsCopy[r].length; c++) {
-        if (slotsCopy[r][c]?.id === swapStudentA) posA = { r, c };
-        if (slotsCopy[r][c]?.id === swapStudentB) posB = { r, c };
-      }
-    }
-
-    if (!posA || !posB) {
-      notify('Таңдалған оқушылар табылған жоқ');
-      return;
-    }
-
-    const temp = slotsCopy[posA.r][posA.c];
-    slotsCopy[posA.r][posA.c] = slotsCopy[posB.r][posB.c];
-    slotsCopy[posB.r][posB.c] = temp;
-
-    setSlotOverrides(slotsCopy);
-
-    const nameA = temp.name;
-    const nameB = slotsCopy[posA.r][posA.c]?.name;
-    setSwapStudentA('');
-    setSwapStudentB('');
-    notify(`✓ ${nameA} және ${nameB} орындары ауыстырылды!`);
+  function notifyLocked() {
+    notify('Орын ауыстыру үшін алдымен құлыпты ашыңыз');
   }
 
-  function handleResetSwaps() {
+  function swapStudents(firstId, secondId) {
+    if (Object.hasOwn(lockedSeats, firstId) || Object.hasOwn(lockedSeats, secondId)) {
+      notifyLocked();
+      return;
+    }
+    const first = effectiveSlots.flat().find(student => student.id === firstId);
+    const second = effectiveSlots.flat().find(student => student.id === secondId);
+    if (!first || !second || firstId === secondId) return;
+
+    const next = arrangedSlots.map(slot => slot.map(student => {
+      if (student.id === firstId) return second;
+      if (student.id === secondId) return first;
+      return student;
+    }));
+    setSlotOverrides(next);
+    onSaveGroup?.({ slotOverrides: next });
+  }
+
+  function resetSwaps() {
     setSlotOverrides(null);
-    setSwapStudentA('');
-    setSwapStudentB('');
-    notify('Бастапқы орналасуға қайтарылды');
+    onSaveGroup?.({ slotOverrides: null });
   }
 
   /* ── PNG Export ─────────────────────────────────────────── */
@@ -474,16 +436,41 @@ export default function ExamScheduler({
   }
 
   const posterHeight = Number(filledSvg2.match(/viewBox="0 0 1828 ([\d.]+)"/)?.[1]) || 841;
-  const seatLockControls = effectiveSlots.flatMap((slot, slotIndex) => slot.map((student, studentIndex) => {
+  const posterRows = effectiveSlots.flatMap((slot, slotIndex) => {
+    if (!slot.length) return [];
+    const left = slotIndex < 8;
     const row = slotIndex % 8;
-    const y = slot.length === 1 ? SLOT_NAME_Y[row].y1 : SLOT_NAME_Y[row][studentIndex === 0 ? 'y1' : 'y2'];
-    const x = slotIndex < 8 ? 438 : 1305;
-    const seatIndex = slotIndex * 2 + studentIndex;
-    const locked = Number(lockedSeats?.[student.id]) === seatIndex;
-    return <button key={student.id} type="button" onClick={() => toggleStudentLockAtSeat(student.id, seatIndex)} aria-label={`${student.name}: ${locked ? 'орынды бекітуден алу' : 'орынды бекіту'}`} aria-pressed={locked} title={locked ? 'Бекітілген орын. Басып, ашыңыз.' : 'Қазіргі орынды бекіту'} style={{ position: 'absolute', left: `${(x / 1828) * 100}%`, top: `${(y / posterHeight) * 100}%`, transform: 'translate(-50%, -50%)', width: '24px', height: '24px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: '50%', border: `1px solid ${locked ? '#f59e0b' : '#cbd5e1'}`, background: locked ? '#fef3c7' : '#fff', color: locked ? '#b45309' : '#64748b', cursor: 'pointer', boxShadow: '0 1px 4px rgba(15,23,42,.18)', zIndex: 3, pointerEvents: 'auto' }}>
-      {locked ? <Lock size={13} /> : <Unlock size={13} />}
-    </button>;
-  }));
+    const start = addMinutesToTime(left ? startTime : effectiveStartTime2, row * interval);
+    return [{
+      key: slotIndex,
+      label: `${left ? effectiveDate1 : effectiveDate2} · ${start}–${addMinutesToTime(start, interval)}`,
+      students: slot.map((student, studentIndex) => {
+        const y = SLOT_NAME_Y[row][studentIndex === 0 ? 'y1' : 'y2'];
+        const seatIndex = slotIndex * 2 + arrangedSlots[slotIndex].findIndex(item => item.id === student.id);
+        const locked = Object.hasOwn(lockedSeats, student.id);
+        return {
+          id: student.id,
+          name: student.name,
+          locked,
+          position: {
+            left: left ? '13.48%' : '61.05%',
+            top: `${y / posterHeight * 100}%`,
+            width: '14%',
+            height: `${32 / posterHeight * 100}%`,
+          },
+          lock: {
+            locked,
+            label: `${student.name}: ${locked ? 'орынды бекітуден алу' : 'орынды бекіту'}`,
+            onClick: () => toggleStudentLockAtSeat(student.id, seatIndex),
+            style: { left: left ? '23.96%' : '71.39%', top: `${y / posterHeight * 100}%` },
+          },
+        };
+      }),
+    }];
+  });
+  const seatLockControls = posterRows.flatMap(row => row.students.map(student => (
+    <PosterLock key={student.id} {...student.lock} />
+  )));
 
   /* ──────────────────────────────────────────────────────────── */
   return (
@@ -519,8 +506,8 @@ export default function ExamScheduler({
             <Btn variant="ghost" onClick={shuffleStudents} disabled={!students.length}>
               <Shuffle size={14} /> Араластыру
             </Btn>
-            {customOrder && (
-              <Btn variant="ghost" onClick={resetOrder} title="Бастапқы ретке қайтару" aria-label="Бастапқы ретке қайтару">
+            {(slotOverrides || customOrder) && (
+              <Btn variant="ghost" onClick={slotOverrides ? resetSwaps : resetOrder} title="Бастапқы ретке қайтару" aria-label="Бастапқы ретке қайтару">
                 <RotateCcw size={14} />
               </Btn>
             )}
@@ -529,7 +516,6 @@ export default function ExamScheduler({
             {[
               { id: 'students', Icon: Users, label: `Оқушылар (${students.length})` },
               { id: 'individual', Icon: Clock, label: individualAppointments.length ? `Жеке уақыт (${individualAppointments.length})` : 'Жеке уақыт' },
-              { id: 'swap', Icon: ArrowLeftRight, label: 'Орын ауыстыру' },
               { id: 'groups', Icon: FolderOpen, label: 'Менің топтарым' },
             ].map(({ id, Icon, label }) => (
               <Btn
@@ -858,38 +844,6 @@ export default function ExamScheduler({
                 </div>
               </div>
             )}
-            {activeTool === 'swap' && (
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' }}>
-                  <span style={{ color: BRAND, background: '#eff0ff', borderRadius: '8px', padding: '7px', display: 'inline-flex' }}><ArrowLeftRight size={17} /></span>
-                  <div>
-                    <div style={{ fontWeight: 800, color: '#111827', fontSize: '14px' }}>Оқушы орындарын ауыстыру</div>
-                    <div style={{ fontSize: '12px', color: '#64748b', marginTop: '2px' }}>Екі оқушыны таңдаңыз — кестедегі орындары ауысады.</div>
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr)', gap: '10px', alignItems: 'end' }}>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>1-ОҚУШЫ
-                    <select value={swapStudentA} onChange={e => setSwapStudentA(e.target.value)} style={{ display: 'block', marginTop: '5px', width: '100%', padding: '9px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#fff', fontSize: '13px', color: '#334155' }}>
-                      <option value="">-- Бірінші оқушыны таңдаңыз --</option>
-                      {swapOptions.map(o => <option key={`exam-a-${o.id}`} value={o.id} disabled={o.id === swapStudentB}>{o.label}</option>)}
-                    </select>
-                  </label>
-                  <label style={{ fontSize: '11px', fontWeight: 700, color: '#475569' }}>2-ОҚУШЫ
-                    <select value={swapStudentB} onChange={e => setSwapStudentB(e.target.value)} style={{ display: 'block', marginTop: '5px', width: '100%', padding: '9px 10px', border: '1px solid #cbd5e1', borderRadius: '8px', background: '#fff', fontSize: '13px', color: '#334155' }}>
-                      <option value="">-- Екінші оқушыны таңдаңыз --</option>
-                      {swapOptions.map(o => <option key={`exam-b-${o.id}`} value={o.id} disabled={o.id === swapStudentA}>{o.label}</option>)}
-                    </select>
-                  </label>
-                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
-                    <Btn onClick={handleSwapStudents} disabled={!swapStudentA || !swapStudentB || swapStudentA === swapStudentB} sx={{ justifyContent: 'center' }}>
-                      <ArrowLeftRight size={14} /> Ауыстыру
-                    </Btn>
-                    {slotOverrides && <Btn variant="ghost" onClick={handleResetSwaps}>Бастапқы рет</Btn>}
-                  </div>
-                </div>
-                {slotOverrides && <div style={{ marginTop: '10px', color: '#64748b', fontSize: '12px' }}>Қолмен өзгертілді. Кестені сақтау үшін «Сақтау» батырмасын басыңыз.</div>}
-              </div>
-            )}
           </div>
         </div>
       </aside>
@@ -913,27 +867,11 @@ export default function ExamScheduler({
           </div>
         </div>
 
-        {/* Live SVG Poster 2 */}
-        <div style={{ width: '100%', maxWidth: '1060px', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-          <div
-            style={{ position: 'relative', width: '100%' }}
-          >
-          <div
-            id="poster-export-exam"
-            style={{
-              width: '100%',
-              borderRadius: '16px',
-              overflow: 'hidden',
-              boxShadow: '0 4px 30px rgba(0, 0, 0, 0.08), 0 0 0 1px rgba(0, 0, 0, 0.05)',
-              background: '#ffffff',
-            }}
-            dangerouslySetInnerHTML={{ __html: filledSvg2 }}
-          />
-          <div aria-label="Закрепление мест учеников" style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
-            {seatLockControls}
-          </div>
-          </div>
-          <div style={{ fontSize: '12px', color: '#64748b', width: '100%' }}>Оқушының орнын бекіту үшін жанындағы 🔓 белгісін басыңыз. Белгілер тек осы жерде көрінеді және PNG файлына түспейді.</div>
+        <div className="poster-workspace">
+          <p className="poster-instructions">Оқушыны басқа оқушының орнына сүйреңіз немесе екі есімді кезекпен басыңыз. 🔓 арқылы орынды бекітіңіз. Құлыптар PNG файлында көрінбейді.</p>
+          <PosterReorder key={activeGid} rows={posterRows} onSwap={swapStudents} onLocked={notifyLocked} locks={seatLockControls}>
+            <div id="poster-export-exam" className="exam-poster-image" dangerouslySetInnerHTML={{ __html: filledSvg2 }} />
+          </PosterReorder>
         </div>
       </main>
     </div>

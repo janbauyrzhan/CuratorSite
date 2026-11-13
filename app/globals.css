@@ -136,7 +136,7 @@ button:disabled { cursor: not-allowed; }
 }
 .exam-settings-toggle span { flex: 1; text-align: left; }
 
-@media (max-width: 850px) {
+@media (max-width: 900px), (max-width: 1180px) and (pointer: coarse) {
   .exam-workspace.pair-workspace { display: block !important; overflow-y: auto !important; }
   .exam-workspace .exam-sidebar {
     width: 100% !important;
@@ -318,3 +318,113 @@ button:disabled { cursor: not-allowed; }
 .plan-date-picker button:focus-visible { outline: 2px solid #7771c7; outline-offset: 2px; }
 @media(max-width: 900px) { .planner-layout { grid-template-columns: 290px minmax(0,1fr); } .planner-controls { padding: 20px 16px; } .planner-preview { padding: 22px; } }
 @media(max-width: 700px) { .weekly-planner { overflow-y: auto; display: block; } .planner-layout { grid-template-columns: 1fr; } .planner-controls { overflow: visible; border-right: 0; border-bottom: 1px solid var(--line); padding: 16px; } .planner-preview { overflow: visible; padding: 18px 16px; gap: 16px; } .planner-poster { width: 100%; } .module-grid-four { grid-template-columns: 1fr; } }
+
+.poster-workspace { width: 100%; max-width: 1060px; min-width: 0; }
+.pairs-layout .poster-workspace { max-width: 1020px; }
+.poster-instructions { margin: 0 0 10px; color: #5d6875; font-size: 12px; line-height: 1.6; }
+.poster-frame { position: relative; container-type: inline-size; }
+.exam-poster-image { border-radius: 16px; overflow: hidden; background: #fff; box-shadow: 0 4px 30px #00000014; }
+.poster-interactions { position: absolute; inset: 0; pointer-events: none; }
+.poster-student-hit {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  border: 1px solid transparent;
+  border-radius: 5px;
+  padding: 0;
+  background: transparent;
+  cursor: grab;
+  pointer-events: auto;
+  touch-action: none;
+}
+.poster-student-hit:hover { border-color: #7d76cf; }
+.poster-student-hit[data-active="true"] { border-color: var(--brand); background: #514fb12b; }
+.poster-student-hit:active, .poster-grip:active { cursor: grabbing; }
+.poster-student-hit:focus-visible, .poster-reorder button:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: 1px;
+}
+.poster-lock {
+  display: inline-grid;
+  place-items: center;
+  width: 36px;
+  height: 36px;
+  padding: 0;
+  border: 1px solid #d4dae3;
+  border-radius: 50%;
+  background: #fff;
+  color: #52637b;
+  cursor: pointer;
+}
+.poster-lock[aria-pressed="true"] { border-color: #e4ac56; background: #fff3d5; color: #914900; }
+.poster-interactions .poster-lock {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: clamp(15px, 2.15cqw, 25px);
+  height: clamp(15px, 2.15cqw, 25px);
+  pointer-events: auto;
+}
+.poster-interactions .poster-lock svg { width: 63%; height: 63%; }
+.poster-drag-name {
+  position: fixed;
+  z-index: 100;
+  pointer-events: none;
+  transform: translate(10px, 12px);
+  max-width: min(220px, 60vw);
+  padding: 6px 10px;
+  border-radius: 6px;
+  color: #fff;
+  background: var(--brand);
+  font-size: 12px;
+  box-shadow: 0 3px 10px #24204435;
+}
+.poster-touch-editor, .poster-preview-toggle, .pairs-settings-toggle { display: none; }
+.pairs-settings { display: flex; flex-direction: column; gap: 18px; min-width: 0; }
+.pairs-layout .workspace-main { min-width: 0; }
+
+@media (max-width: 900px), (max-width: 1180px) and (pointer: coarse) {
+  .pairs-layout.pair-workspace, .exam-workspace.pair-workspace {
+    display: block !important;
+    overflow: auto !important;
+  }
+  .pairs-layout .workspace-sidebar { width: 100% !important; max-height: none; overflow: visible !important; border-right: 0 !important; border-bottom: 1px solid var(--line); }
+  .pairs-layout .workspace-main, .exam-workspace .exam-main { width: 100%; overflow: visible !important; }
+  .pairs-settings-toggle, .poster-preview-toggle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    min-height: 44px;
+    padding: 8px 12px;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    background: #fff;
+    color: var(--brand);
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .pairs-settings { display: none; }
+  .pairs-settings.is-open { display: flex; }
+  .poster-reorder { display: flex; flex-direction: column; gap: 10px; }
+  .poster-touch-editor { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 260px), 1fr)); gap: 8px; }
+  .poster-touch-row { min-width: 0; padding: 8px; border: 1px solid var(--line); border-radius: 8px; background: #fff; }
+  .poster-touch-label { display: flex; justify-content: space-between; align-items: center; gap: 8px; min-height: 24px; margin: 0 4px 4px; color: #52637b; font-size: 11px; font-weight: 700; }
+  .poster-touch-students { display: grid; gap: 4px; }
+  .poster-touch-student { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  .poster-student-name, .poster-grip { padding: 6px 8px; border: 1px solid transparent; border-radius: 6px; background: #f6f6fb; color: #20243d; }
+  .poster-student-name { flex: 1; min-width: 0; min-height: 44px; font-size: 13px; text-align: left; overflow-wrap: anywhere; }
+  .poster-grip { display: grid; place-items: center; flex: 0 0 42px; min-height: 44px; cursor: grab; touch-action: none; }
+  .poster-touch-student .poster-lock { flex-shrink: 0; }
+  .poster-student-name[data-active="true"], .poster-grip[data-active="true"] { border-color: #7d76cf; background: #eae8fd; }
+  .poster-preview-toggle { width: 100%; order: -2; }
+  .poster-frame { display: none; order: -1; }
+  .poster-frame.is-open { display: block; }
+  .poster-interactions { display: none; }
+}
+
+@media (max-width: 480px) {
+  .app-tabs { flex-wrap: wrap; }
+  .app-tabs > button { flex: 1 1 auto; white-space: normal; padding: 8px !important; }
+  .workspace-toolbar > button { min-width: min(100%, 135px); }
+  .poster-touch-editor { grid-template-columns: minmax(0, 1fr); }
+}
