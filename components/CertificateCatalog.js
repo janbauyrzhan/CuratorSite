@@ -8,9 +8,9 @@ import { EXTRA_CERTIFICATE_TEMPLATES } from './ExtraCertificateTemplates';
 
 const FONT = '"Certificate Open Sans"';
 const TEMPLATES = [
-  { id: 'weekly-1', label: '1-орын', period: 'Апталық', place: 1, student: [590, 380], week: [588, 416], teacherX: 100, curatorX: 259, color: '#f8f093' },
-  { id: 'weekly-2', label: '2-орын', period: 'Апталық', place: 2, student: [590, 386], week: [597, 423], teacherX: 96, curatorX: 255, color: '#e0c2c1' },
-  { id: 'weekly-3', label: '3-орын', period: 'Апталық', place: 3, student: [590, 386], week: [585, 420], teacherX: 96, curatorX: 255, color: '#18f0f6' },
+  { id: 'weekly-1', label: '1-орын', period: 'Апталық', place: 1, subjectBadge: true, student: [590, 380], week: [588, 416], teacherX: 100, curatorX: 259, color: '#f8f093' },
+  { id: 'weekly-2', label: '2-орын', period: 'Апталық', place: 2, subjectBadge: true, student: [590, 386], week: [597, 423], teacherX: 96, curatorX: 255, color: '#e0c2c1' },
+  { id: 'weekly-3', label: '3-орын', period: 'Апталық', place: 3, subjectBadge: true, student: [590, 386], week: [585, 420], teacherX: 96, curatorX: 255, color: '#18f0f6' },
   { id: 'trophy', label: 'Кубок', period: 'Айлық', monthly: true, student: [42, 414, 58, 560, 'left'], teacher: [42, 646, 28, 300, 'left'], curator: [744, 646, 28, 260, 'right'], description: [42, 466, 550, 22, 24, 'left'], teacherLabel: [43, 669] },
   { id: 'photo', label: 'Фотосуретпен', period: 'Айлық', monthly: true, student: [540, 244, 100, 815, 'left'], teacher: [549, 510, 28, 390, 'left'], curator: [1356, 510, 28, 340, 'right'], description: [549, 329, 650, 22, 24, 'left'], teacherLabel: [550, 535] },
   { id: 'classic', label: 'Классикалық', period: 'Айлық', monthly: true, student: [720, 345, 64, 750, 'center'], teacher: [455, 561, 28, 450, 'center'], curator: [1010, 561, 28, 450, 'center'], description: [720, 404, 620, 20, 27, 'center'], teacherLabel: [312, 584] },
@@ -147,6 +147,12 @@ function renderCertificate(canvas, image, template, values, photo) {
       : values.week + '-АПТА';
     text(period, ...template.periodPosition, 'schedule');
     if (template.selectablePlace) text('ТОП-' + values.awardPlace, ...template.placePosition, 'place');
+    if (template.medalPosition) {
+      context.font = '400 40px Arial, sans-serif';
+      context.fillStyle = '#111111';
+      context.textAlign = 'center';
+      context.fillText(values.awardPlace, ...template.medalPosition);
+    }
     return completedRegions();
   }
 
@@ -199,6 +205,11 @@ function renderCertificate(canvas, image, template, values, photo) {
     return regions;
   }
 
+  if (template.subjectBadge) {
+    context.fillStyle = '#1f2022';
+    context.fillRect(522, 36, 112, 22);
+    text(values.subject, 578, 51, 14, 108, '#fff', 'center', 'subject');
+  }
   text(values.student, ...template.student, template.pair ? 24 : 27, 365, template.color, 'center', 'student');
   if (template.pair) text(values.secondStudent, 590, 382, 24, 365, template.color, 'center', 'secondStudent');
   text(values.teacher, template.teacherX, 484, 15, 150, '#fff', 'center', 'teacher');
@@ -238,7 +249,7 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
   const [week, setWeek] = useState('6');
   const [month, setMonth] = useState('1');
   const [awardPlace, setAwardPlace] = useState('1');
-  const [robotPlace, setRobotPlace] = useState('1');
+  const [placeChoices, setPlaceChoices] = useState({});
   const [subject, setSubject] = useState('Информатика');
   const [score, setScore] = useState('195/212');
   const [photo, setPhoto] = useState(null);
@@ -271,13 +282,17 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
   const validWeek = /^[1-9]\d?$/.test(week);
   const validMonth = /^[1-9]\d?$/.test(month);
   const monthlyPeriod = template.period === 'Айлық';
-  const chosenPlace = template.selectablePlace ? robotPlace : awardPlace;
+  const chosenPlace = template.selectablePlace ? (placeChoices[template.id] || String(template.place)) : awardPlace;
+  const setChosenPlace = value => template.selectablePlace
+    ? setPlaceChoices(current => ({ ...current, [template.id]: value }))
+    : setAwardPlace(value);
   const image = loaded?.src === template.src ? loaded.image : null;
   const examplePhoto = loaded?.src === template.src ? loaded.examplePhoto : null;
   const canDownload = image && validWeek && (!monthlyPeriod || validMonth)
     && student.trim() && teacher.trim() && curator.trim()
     && (!template.pair || secondStudent.trim())
-    && (template.id !== 'trophy' || (subject.trim() && score.trim()))
+    && (!(template.id === 'trophy' || template.subjectBadge) || subject.trim())
+    && (template.id !== 'trophy' || score.trim())
     && (template.id !== 'photo' || (examplePhoto && !photoLoading)) && !downloading;
   const canSaveAward = activeGroup && validWeek && (!monthlyPeriod || validMonth)
     && student.trim() && (!template.pair || secondStudent.trim());
@@ -535,7 +550,7 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
             <input value={teacher} onChange={e => setTeacher(e.target.value)} required maxLength={120} />
           </label>
           {(template.monthly || template.selectablePlace) && <label>Орын
-            <select value={chosenPlace} onChange={e => template.selectablePlace ? setRobotPlace(e.target.value) : setAwardPlace(e.target.value)}>
+            <select value={chosenPlace} onChange={e => setChosenPlace(e.target.value)}>
               {[1, 2, 3].map(value => <option key={value} value={value}>{value}-орын</option>)}
             </select>
           </label>}
@@ -547,9 +562,9 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
               <input type="number" min="1" max="99" value={week} onChange={e => setWeek(e.target.value)} required />
             </label>
           </div>
-          {template.id === 'trophy' && <>
+          {(template.id === 'trophy' || template.subjectBadge) && <>
             <label>Пән<input value={subject} onChange={e => setSubject(e.target.value)} maxLength={80} required /></label>
-            <label>Балл<input value={score} onChange={e => setScore(e.target.value)} maxLength={30} required /></label>
+            {template.id === 'trophy' && <label>Балл<input value={score} onChange={e => setScore(e.target.value)} maxLength={30} required /></label>}
           </>}
           {template.id === 'photo' && <label>Оқушының фотосуреті
             <input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} />
@@ -597,7 +612,7 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
                 {inlineFieldNames.map((field, index) => inlineField(field, index === 0))}
                 {((activeEdit.field === 'schedule' && template.monthly) || activeEdit.field === 'place') && <label>Орын
                   <select ref={activeEdit.field === 'place' ? inlineInput : undefined} value={chosenPlace}
-                    onChange={event => template.selectablePlace ? setRobotPlace(event.target.value) : setAwardPlace(event.target.value)}>
+                    onChange={event => setChosenPlace(event.target.value)}>
                     {[1, 2, 3].map(value => <option key={value} value={value}>{value}-орын</option>)}
                   </select>
                 </label>}
