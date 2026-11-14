@@ -993,7 +993,7 @@ export default function App() {
                 ← Басты мәзірге
               </button>
 
-              {activeTab === 'plan' ? <nav className="app-tabs plan-subject-nav" aria-label="Жоспар пәндері"><button className="planner-tab" aria-current={!planSubject?'page':undefined} onClick={()=>selectPlanSubject(null)}>Барлық пәндер</button>{PLAN_SUBJECTS.map(subject=><button key={subject.id} className="planner-tab" aria-current={planSubject===subject.id?'page':undefined} onClick={()=>selectPlanSubject(subject.id)}>{subject.name}</button>)}</nav> : <div className="app-tabs" style={{ display: 'flex', background: '#eff0ff', borderRadius: '10px', padding: '3px', gap: '3px' }}>
+              <nav className="app-tabs" aria-label="Жұмыс бөлімдері" style={{ display: 'flex', background: '#eff0ff', borderRadius: '10px', padding: '3px', gap: '3px' }}>
                 <button
                   onClick={() => navigate('pairs')}
                   aria-current={activeTab === 'pairs' ? 'page' : undefined}
@@ -1022,12 +1022,12 @@ export default function App() {
                 >
                   <Clock size={14} /> Сабақ тапсыру
                 </button>
-                <button className="planner-tab" onClick={() => navigate('plan')}>Апталық жоспар</button>
+                <button className="planner-tab" aria-current={activeTab === 'plan' ? 'page' : undefined} onClick={() => navigate('plan')}>Апталық жоспар</button>
                 <button className="planner-tab certificate-tab" type="button" onClick={() => navigate('certificates')}
                   aria-current={activeTab === 'certificates' ? 'page' : undefined}>
                   <Award size={14} aria-hidden="true" /> Сертификаттар
                 </button>
-              </div>}
+              </nav>
             </div>
           ) : (
             <span style={{ fontSize: '13px', color: '#64748b', fontWeight: 600 }}>
@@ -1596,11 +1596,18 @@ export default function App() {
           groups={groups} activeGroup={activeGroup} onSelectGroup={selectGroup}
           onSaveAward={saveCertificateAward} onDeleteAward={deleteCertificateAward} />
       ) : activeTab === 'plan' ? (
-        !['informatics','mathematics','physics'].includes(planSubject) ? <PlanSubjects subject={planSubject} onSelect={selectPlanSubject}/> :
+        <div className="plan-workspace">
+        <nav className="plan-subject-nav" aria-label="Жоспар пәндері">
+          <button className="planner-tab" type="button" aria-current={!planSubject ? 'page' : undefined} onClick={() => selectPlanSubject(null)}>Барлық пәндер</button>
+          {PLAN_SUBJECTS.map(subject => <button className="planner-tab" key={subject.id} type="button"
+            aria-current={planSubject === subject.id ? 'page' : undefined} onClick={() => selectPlanSubject(subject.id)}>{subject.name}</button>)}
+        </nav>
+        {!['informatics','mathematics','physics'].includes(planSubject) ? <PlanSubjects subject={planSubject} onSelect={selectPlanSubject}/> :
         <WeeklyPlanner userId={user?.id} syncState={syncState} groups={groups} activeGid={activeGid} selectGroup={selectGroup} notify={notify} subject={planSubject}
           onChange={(gid, week, plan, subject=planSubject) => {try{writePlanDraft(user.id,gid,week,plan,subject);}catch{notify('Құрылғыға сақтау мүмкін болмады. Cloud сақталуын күтіңіз.');}setGroups(current => current.map(g => g.id === gid ? {
             ...g, weeklyPlans: {...g.weeklyPlans, [subject]: {...g.weeklyPlans?.[subject], [week]: plan}},
-          } : g));}} />
+          } : g));}} />}
+        </div>
       ) : (
         /* ════ TAB 2: «САБАҚ ТАПСЫРУ» EXAM SCHEDULER ═══════════ */
         <ExamScheduler
