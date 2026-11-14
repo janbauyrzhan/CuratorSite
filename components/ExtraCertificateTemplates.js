@@ -11,12 +11,13 @@ export const EXTRA_CERTIFICATE_TEMPLATES = [
     periodPosition: [421, 206, 13, 300, '#343434', 'center'],
   },
   {
-    ...size, id: 'robot-award', label: 'Роботтар · 1-орын', period: 'Апталық', place: 1, custom: true,
+    ...size, id: 'robot-award', label: 'Роботтар', period: 'Апталық', place: 1, selectablePlace: true, custom: true,
     student: [421, 325, 28, 420, '#fff', 'center'],
     teacher: [240, 535, 14, 190, '#fff', 'center'],
     curator: [600, 535, 14, 190, '#fff', 'center'],
     teacherLabel: [240, 510, 17, 180, '#fff', 'center'],
     periodPosition: [421, 235, 17, 430, '#fff', 'center'],
+    placePosition: [421, 278, 17, 140, '#fff', 'center'],
   },
   {
     ...size, id: 'stars-award', label: 'Алтын жұлдыздар · 3-орын', period: 'Апталық', place: 3, custom: true,

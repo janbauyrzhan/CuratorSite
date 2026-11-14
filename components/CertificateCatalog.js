@@ -146,6 +146,7 @@ function renderCertificate(canvas, image, template, values, photo) {
       ? values.month + '-АЙ · ' + values.week + '-АПТА'
       : values.week + '-АПТА';
     text(period, ...template.periodPosition, 'schedule');
+    if (template.selectablePlace) text('ТОП-' + values.awardPlace, ...template.placePosition, 'place');
     return completedRegions();
   }
 
@@ -222,6 +223,7 @@ const FIELD_LABELS = {
   score: 'Балл',
   schedule: 'Ай, апта және орын',
   photo: 'Фотосуретті өзгерту',
+  place: 'Орын',
 };
 
 export default function CertificateCatalog({ favorites = [], onFavoriteChange = () => {}, groups = [], activeGroup = null, onSelectGroup = () => {}, onSaveAward = () => {}, onDeleteAward = () => {} }) {
@@ -236,6 +238,7 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
   const [week, setWeek] = useState('6');
   const [month, setMonth] = useState('1');
   const [awardPlace, setAwardPlace] = useState('1');
+  const [robotPlace, setRobotPlace] = useState('1');
   const [subject, setSubject] = useState('Информатика');
   const [score, setScore] = useState('195/212');
   const [photo, setPhoto] = useState(null);
@@ -268,6 +271,7 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
   const validWeek = /^[1-9]\d?$/.test(week);
   const validMonth = /^[1-9]\d?$/.test(month);
   const monthlyPeriod = template.period === 'Айлық';
+  const chosenPlace = template.selectablePlace ? robotPlace : awardPlace;
   const image = loaded?.src === template.src ? loaded.image : null;
   const examplePhoto = loaded?.src === template.src ? loaded.examplePhoto : null;
   const canDownload = image && validWeek && (!monthlyPeriod || validMonth)
@@ -302,14 +306,14 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
       teacher: teacher.trim() || 'Мұғалімнің аты-жөні',
       curator: curator.trim() || 'Куратордың аты-жөні',
       week: validWeek ? week : '…', month: validMonth ? month : '…',
-      awardPlace, subject: subject.trim(), score: score.trim(),
+      awardPlace: chosenPlace, subject: subject.trim(), score: score.trim(),
     };
   }
 
   useEffect(() => {
     if (!image || !canvas.current) return;
     setRegions(renderCertificate(canvas.current, image, template, certificateValues(), photo || examplePhoto));
-  }, [image, template, student, secondStudent, teacher, curator, week, month, awardPlace, subject, score, photo, examplePhoto, editing]);
+  }, [image, template, student, secondStudent, teacher, curator, week, month, chosenPlace, subject, score, photo, examplePhoto, editing]);
 
   useEffect(() => {
     if (activeEdit) inlineInput.current?.focus();
@@ -377,7 +381,7 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
       const filename = student.trim().replace(/[<>:"/\\|?*]/g, '-').slice(0, 90);
       const period = monthlyPeriod ? month + '-ай_' + week + '-апта' : week + '-апта';
       const award = template.place
-        ? template.place + '-орын'
+        ? (template.selectablePlace ? chosenPlace : template.place) + '-орын'
         : template.id + (template.monthly ? '_' + awardPlace + '-орын' : '');
       link.download = 'сертификат_' + period + '_' + award + '_' + filename + '.png';
       link.click();
@@ -393,7 +397,8 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
   function saveAward() {
     if (!canSaveAward) return;
     onSaveAward({ template, student: student.trim(), secondStudent: secondStudent.trim(),
-      week: Number(week), month: monthlyPeriod ? Number(month) : null, awardPlace: template.monthly ? Number(awardPlace) : template.place });
+      week: Number(week), month: monthlyPeriod ? Number(month) : null,
+      awardPlace: template.monthly || template.selectablePlace ? Number(chosenPlace) : template.place });
   }
 
   const inlineFields = {
@@ -447,12 +452,12 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
   }
 
   const isFavorite = favorites.includes(template.id);
-  const groupedEdit = activeEdit?.field === 'schedule' || activeEdit?.field === 'pair';
+  const groupedEdit = activeEdit?.field === 'schedule' || activeEdit?.field === 'pair' || activeEdit?.field === 'place';
   const inlineFieldNames = activeEdit?.field === 'pair'
     ? ['student', 'secondStudent']
     : activeEdit?.field === 'schedule'
       ? monthlyPeriod ? ['month', 'week'] : ['week']
-      : activeEdit ? [activeEdit.field] : [];
+      : activeEdit && activeEdit.field !== 'place' ? [activeEdit.field] : [];
 
   return (
     <main ref={main} className="certificate-catalog" aria-labelledby="certificates-title">
@@ -529,8 +534,8 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
           <label>Мұғалімнің аты-жөні
             <input value={teacher} onChange={e => setTeacher(e.target.value)} required maxLength={120} />
           </label>
-          {template.monthly && <label>Орын
-            <select value={awardPlace} onChange={e => setAwardPlace(e.target.value)}>
+          {(template.monthly || template.selectablePlace) && <label>Орын
+            <select value={chosenPlace} onChange={e => template.selectablePlace ? setRobotPlace(e.target.value) : setAwardPlace(e.target.value)}>
               {[1, 2, 3].map(value => <option key={value} value={value}>{value}-орын</option>)}
             </select>
           </label>}
@@ -590,8 +595,9 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
                   }
                 }}>
                 {inlineFieldNames.map((field, index) => inlineField(field, index === 0))}
-                {activeEdit.field === 'schedule' && template.monthly && <label>Орын
-                  <select value={awardPlace} onChange={event => setAwardPlace(event.target.value)}>
+                {((activeEdit.field === 'schedule' && template.monthly) || activeEdit.field === 'place') && <label>Орын
+                  <select ref={activeEdit.field === 'place' ? inlineInput : undefined} value={chosenPlace}
+                    onChange={event => template.selectablePlace ? setRobotPlace(event.target.value) : setAwardPlace(event.target.value)}>
                     {[1, 2, 3].map(value => <option key={value} value={value}>{value}-орын</option>)}
                   </select>
                 </label>}
