@@ -148,6 +148,8 @@ button:disabled { cursor: not-allowed; }
 .certificate-batch-card-heading span { color: var(--brand); font-size: 12px; font-weight: 600; }
 .certificate-batch-card canvas { display: block; width: 100%; height: auto; }
 .certificate-batch-card > p { margin: 8px 14px; color: #a52222; font-size: 12px; }
+.certificate-batch-single-download { display: inline-flex; align-items: center; gap: 5px; margin: 10px 14px; padding: 7px 9px; border: 1px solid #dedfd5; border-radius: 6px; background: #fff; color: #514fb1; font-size: 12px; cursor: pointer; }
+.certificate-batch-single-download:disabled { opacity: .45; cursor: not-allowed; }
 @media (max-width: 1000px) { .certificate-batch-results { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
 @media (max-width: 350px) { .certificate-batch-results { grid-template-columns: minmax(0, 1fr); } }
 .certificate-form { display: grid; gap: 13px; padding: 16px; border: 1px solid var(--line); border-radius: 10px; background: #fff; }

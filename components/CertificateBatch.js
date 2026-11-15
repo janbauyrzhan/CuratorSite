@@ -72,11 +72,12 @@ export default function CertificateBatch({
   }));
   const validWeek = /^[1-9]\d?$/.test(week);
   const validMonth = template.period !== 'Айлық' || /^[1-9]\d?$/.test(month);
-  const validRows = rows.length > 0 && rows.every(row => (mode !== 'flexible' || row.place) && (!template.pair || row.second));
-  const canDownload = validRows && validWeek && validMonth && teacher.trim() && curator.trim()
+  const rowReady = row => (mode !== 'flexible' || row.place) && (!template.pair || row.second);
+  const formReady = validWeek && validMonth && teacher.trim() && curator.trim()
     && (!(template.subjectBadge || template.id === 'trophy') || subject.trim())
     && (template.id !== 'trophy' || score.trim())
     && (template.id !== 'photo' || (photo && !photoLoading)) && !busy;
+  const canDownload = formReady && rows.length > 0 && rows.every(rowReady);
 
   function resolveTemplate(place) {
     if (mode === 'flexible' && !place) return null;
@@ -121,17 +122,14 @@ export default function CertificateBatch({
     setPlaces(nextPlaces);
   }
 
-  async function downloadBatch(event) {
-    event.preventDefault();
-    if (!canDownload) return;
+  async function downloadRows(selectedRows) {
+    if (!formReady || !selectedRows.length || !selectedRows.every(rowReady)) return;
     setBusy(true);
     setError('');
+    const prepared = [];
     try {
-      const { default: JSZip } = await import('jszip');
-      const zip = new JSZip();
-      const awards = [];
-      for (const [index, row] of rows.entries()) {
-        setProgress((index + 1) + ' / ' + rows.length);
+      for (const [index, row] of selectedRows.entries()) {
+        setProgress((index + 1) + ' / ' + selectedRows.length);
         const selected = resolveTemplate(row.place);
         if (!selected) throw new Error('Үлгі табылмады.');
         const image = await loader(selected);
@@ -144,22 +142,24 @@ export default function CertificateBatch({
         }, photo);
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         if (!blob) throw new Error('PNG файлын дайындау мүмкін болмады.');
-        const safeName = row.name.replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').slice(0, 90);
-        const number = String(index + 1).padStart(String(rows.length).length, '0');
-        const place = row.place ? '_' + row.place + '-орын' : '';
-        zip.file(number + '_' + safeName + place + '.png', blob);
-        awards.push({ template: selected, student: row.name, secondStudent: row.second,
+        const safeName = [row.name, row.second].filter(Boolean).join(' - ').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '-').slice(0, 120);
+        const place = row.place ? row.place + '-орын_' : '';
+        prepared.push({ blob, filename: place + safeName + '.png', award: { template: selected, student: row.name, secondStudent: row.second,
           week: Number(week), month: selected.period === 'Айлық' ? Number(month) : null,
-          awardPlace: row.place ? Number(row.place) : selected.place });
+          awardPlace: row.place ? Number(row.place) : selected.place } });
       }
-      const blob = await zip.generateAsync({ type: 'blob', compression: 'STORE' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'сертификаттар_' + week + '-апта.zip';
-      link.click();
-      window.setTimeout(() => URL.revokeObjectURL(url), 1000);
-      if (activeGroup) awards.forEach(onSaveAward);
+      // Browsers may ask the user to allow multiple automatic downloads.
+      for (const file of prepared) {
+        const url = URL.createObjectURL(file.blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = file.filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        window.setTimeout(() => URL.revokeObjectURL(url), 60000);
+      }
+      if (activeGroup) prepared.forEach(file => onSaveAward(file.award));
       setProgress('');
     } catch {
       setError('Сертификаттарды дайындау мүмкін болмады. Қайта көріңіз.');
@@ -167,6 +167,11 @@ export default function CertificateBatch({
     } finally {
       setBusy(false);
     }
+  }
+
+  function downloadBatch(event) {
+    event.preventDefault();
+    if (canDownload) downloadRows(rows);
   }
 
   return <div className="certificate-batch">
@@ -204,8 +209,9 @@ export default function CertificateBatch({
       {template.id === 'photo' && <p className="certificate-batch-hint">Бір фотосурет барлық сертификатта қолданылады.</p>}
       {template.id === 'photo' && <button type="button" className="certificate-photo-reset" onClick={resetPhoto}>Үлгі суретін қайтару</button>}
       <button className="brand-button" type="submit" disabled={!canDownload}>
-        <Download size={16} aria-hidden="true" /> {busy ? 'Дайындалып жатыр… ' + progress : 'Барлығын ZIP жүктеу'}
+        <Download size={16} aria-hidden="true" /> {busy ? 'Дайындалып жатыр… ' + progress : 'Барлығын PNG жүктеу'}
       </button>
+      {rows.length > 1 && <p className="certificate-batch-hint">Әр сертификат бөлек жүктеледі. Браузер сұраса, бірнеше файлды жүктеуге рұқсат беріңіз.</p>}
       {activeGroup && <p className="certificate-batch-hint">Жүктелген нәтижелер топтың марапаттар тарихына қосылады.</p>}
       {error && <p role="alert">{error}</p>}
     </form>
@@ -229,6 +235,10 @@ export default function CertificateBatch({
         {template.pair && !row.second && <p role="alert">Екінші оқушыны қосыңыз.</p>}
         <BatchPreview entry={row} template={resolveTemplate(row.place)} values={values} photo={photo}
           getImage={loader} renderCertificate={renderCertificate} />
+        <button className="certificate-batch-single-download" type="button" disabled={!formReady || !rowReady(row)}
+          onClick={() => downloadRows([row])} aria-label={row.name + ' сертификатын жүктеу'}>
+          <Download size={14} aria-hidden="true" /> PNG жүктеу
+        </button>
       </article>)}
     </section>
   </div>;

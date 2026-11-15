@@ -38,13 +38,15 @@ const TEMPLATES = [
     periodPosition: [85, 1210, 24, 600, '#fff', 'left'],
   })),
   {
-    id: 'monthly-gold', label: 'Алтын кубок · 1-орын', period: 'Айлық', place: 1, custom: true,
+    id: 'monthly-gold', label: 'Алтын кубок · Айлық рейтинг', period: 'Айлық', place: 1, selectablePlace: true, custom: true,
     width: 419.25, height: 297.749991, canvasHeight: 1151,
     student: [31, 153, 15, 235, '#171717', 'left'],
     teacher: [32, 263, 9, 140, '#171717', 'left'],
     curator: [315, 263, 9, 130, '#171717', 'right'],
     teacherLabel: [31, 252, 9, 90, '#171717', 'left'],
     periodPosition: [31, 284, 7, 230, '#6c43bb', 'left'],
+    placeBackground: [216, 74, 60, 18, '#fff'],
+    placePosition: [218, 89, 16, 60, '#303039', 'left'],
   },
   {
     id: 'monthly-notes', label: 'Үздік конспект · Кітаптар', period: 'Айлық', custom: true,
@@ -147,7 +149,14 @@ function renderCertificate(canvas, image, template, values, photo) {
       ? values.month + '-АЙ · ' + values.week + '-АПТА'
       : values.week + '-АПТА';
     text(period, ...template.periodPosition, 'schedule');
-    if (template.selectablePlace) text('ТОП-' + values.awardPlace, ...template.placePosition, 'place');
+    if (template.selectablePlace) {
+      if (template.placeBackground) {
+        const [x, y, width, height, color] = template.placeBackground;
+        context.fillStyle = color;
+        context.fillRect(x, y, width, height);
+      }
+      text('ТОП-' + values.awardPlace, ...template.placePosition, 'place');
+    }
     if (template.medalPosition) {
       context.font = '400 40px Arial, sans-serif';
       context.fillStyle = '#111111';
