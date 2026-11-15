@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { ArrowLeft, ArrowRight, Download, Heart, Search } from 'lucide-react';
 import CertificateStudentField from './CertificateStudentField';
 import CertificateHistory from './CertificateHistory';
+import CertificateBatch from './CertificateBatch';
 import { EXTRA_CERTIFICATE_TEMPLATES } from './ExtraCertificateTemplates';
 
 const FONT = '"Certificate Open Sans"';
@@ -240,6 +241,7 @@ const FIELD_LABELS = {
 export default function CertificateCatalog({ favorites = [], onFavoriteChange = () => {}, groups = [], activeGroup = null, onSelectGroup = () => {}, onSaveAward = () => {}, onDeleteAward = () => {} }) {
   const [selectedId, setSelectedId] = useState(TEMPLATES[0].id);
   const [editing, setEditing] = useState(false);
+  const [editMode, setEditMode] = useState('single');
   const [query, setQuery] = useState('');
   const [scope, setScope] = useState(favorites.length ? 'mine' : 'all');
   const [showHistory, setShowHistory] = useState(false);
@@ -328,7 +330,7 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
   useEffect(() => {
     if (!image || !canvas.current) return;
     setRegions(renderCertificate(canvas.current, image, template, certificateValues(), photo || examplePhoto));
-  }, [image, template, student, secondStudent, teacher, curator, week, month, chosenPlace, subject, score, photo, examplePhoto, editing]);
+  }, [image, template, student, secondStudent, teacher, curator, week, month, chosenPlace, subject, score, photo, examplePhoto, editing, editMode]);
 
   useEffect(() => {
     if (activeEdit) inlineInput.current?.focus();
@@ -348,6 +350,7 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
     galleryScroll.current = main.current?.scrollTop || 0;
     setActiveEdit(null);
     setSelectedId(id);
+    setEditMode('single');
     setEditing(true);
   }
 
@@ -537,7 +540,17 @@ export default function CertificateCatalog({ favorites = [], onFavoriteChange = 
           : <p className="certificate-no-results" role="status">Үлгі табылмады. Басқа сөзбен іздеп көріңіз.</p>)}
         </>}
       </>}
-      {editing && <div className="certificate-editor">
+      {editing && <div className="certificate-mode" aria-label="Сертификат дайындау тәсілі">
+        <button type="button" aria-pressed={editMode === 'single'} onClick={() => setEditMode('single')}>Бір оқушы</button>
+        <button type="button" aria-pressed={editMode === 'batch'} onClick={() => setEditMode('batch')}>Тізім бойынша</button>
+      </div>}
+      {editing && editMode === 'batch' && <CertificateBatch key={template.id} template={template} templates={TEMPLATES}
+        values={certificateValues()} teacher={teacher} curator={curator} setTeacher={setTeacher} setCurator={setCurator}
+        week={week} setWeek={setWeek} month={month} setMonth={setMonth} subject={subject} setSubject={setSubject}
+        score={score} setScore={setScore} photo={photo || examplePhoto} photoLoading={photoLoading} photoError={photoError}
+        choosePhoto={choosePhoto} resetPhoto={resetPhoto} photoInput={photoInput} activeGroup={activeGroup}
+        onSaveAward={onSaveAward} renderCertificate={renderCertificate} loadImage={loadImage} />}
+      {editing && editMode === 'single' && <div className="certificate-editor">
         <form className="certificate-form" onSubmit={download} autoComplete="off">
           <CertificateStudentField group={activeGroup} label={template.pair ? 'Бірінші оқушының аты-жөні' : 'Оқушының аты-жөні'}
             value={student} onChange={value => changeName('student', value)} />
