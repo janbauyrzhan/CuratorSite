@@ -1,8 +1,9 @@
 'use client';
 
 import { useEffect, useRef, useState } from 'react';
-import { Download } from 'lucide-react';
+import { Download, FileUp } from 'lucide-react';
 import { previousWeeklyRanking } from '../lib/certificateAwardHistory';
+import { rankTopThree, readRankingPdf } from '../lib/rankingPdf.mjs';
 
 function familyId(template, place) {
   if (/^weekly-[123]$/.test(template.id)) return 'weekly-' + place;
@@ -38,11 +39,12 @@ function BatchPreview({ entry, template, values, getImage, renderCertificate, ph
         renderCertificate(canvas.current, image, template, {
           ...values, student: entry.name, secondStudent: entry.second || 'Екінші оқушының аты-жөні',
           awardPlace: String(entry.place || template.place || '1'),
+          score: entry.score ?? values.score,
         }, photo);
       }
     }).catch(() => { if (!cancelled) setError('Үлгі жүктелмеді.'); });
     return () => { cancelled = true; };
-  }, [entry.name, entry.second, entry.place, template, values.teacher, values.curator,
+  }, [entry.name, entry.second, entry.place, entry.score, template, values.teacher, values.curator,
     values.week, values.month, values.subject, values.score, photo, getImage, renderCertificate]);
   if (!template) return <div className="certificate-batch-pending">Орынды таңдаңыз</div>;
   return <>
@@ -60,6 +62,12 @@ export default function CertificateBatch({
 }) {
   const [source, setSource] = useState('');
   const [places, setPlaces] = useState([]);
+  const [scores, setScores] = useState([]);
+  const [pdfRows, setPdfRows] = useState(null);
+  const [pdfName, setPdfName] = useState('');
+  const [pdfError, setPdfError] = useState('');
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const [tieRule, setTieRule] = useState('dense');
   const [busy, setBusy] = useState(false);
   const [progress, setProgress] = useState('');
   const [error, setError] = useState('');
@@ -69,7 +77,9 @@ export default function CertificateBatch({
   const rows = readRows(source, template.pair).map((row, index) => ({
     ...row,
     place: mode === 'nomination' ? null : mode === 'fixed' ? template.place : (places[index] ?? (index < 3 ? String(index + 1) : '')),
+    score: scores[index] ?? null,
   }));
+  const pdfRanking = pdfRows ? rankTopThree(pdfRows, tieRule) : [];
   const validWeek = /^[1-9]\d?$/.test(week);
   const validMonth = template.period !== 'Айлық' || /^[1-9]\d?$/.test(month);
   const rowReady = row => (mode !== 'flexible' || row.place) && (!template.pair || row.second);
@@ -103,6 +113,7 @@ export default function CertificateBatch({
     if (source.trim() && !window.confirm('Қазіргі тізім өткен аптаның рейтингімен ауыстырылады. Жалғастыру керек пе?')) return;
     setSource(previousRanking.map(row => row.name).join('\n'));
     setPlaces(previousRanking.map(row => row.place));
+    setScores([]);
   }
 
   function changeSource(nextSource) {
@@ -111,15 +122,44 @@ export default function CertificateBatch({
     for (const row of rows) {
       const key = row.name + '\t' + row.second;
       const list = existing.get(key) || [];
-      list.push(row.place);
+      list.push({ place: row.place, score: row.score });
       existing.set(key, list);
     }
-    const nextPlaces = readRows(nextSource, template.pair).map((row, index) => {
+    const nextRows = readRows(nextSource, template.pair).map((row, index) => {
       const matches = existing.get(row.name + '\t' + row.second);
-      return matches?.length ? matches.shift() : (index < 3 ? String(index + 1) : '');
+      return matches?.length ? matches.shift() : { place: index < 3 ? String(index + 1) : '', score: null };
     });
     setSource(nextSource);
-    setPlaces(nextPlaces);
+    setPlaces(nextRows.map(row => row.place));
+    setScores(nextRows.map(row => row.score));
+  }
+
+  async function chooseRankingPdf(event) {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file) return;
+    setPdfBusy(true);
+    setPdfError('');
+    setPdfRows(null);
+    try {
+      const found = await readRankingPdf(file);
+      setPdfRows(found);
+      setPdfName(file.name);
+    } catch (error) {
+      setPdfError(error?.message?.includes('PDF') || error?.message?.includes('бал')
+        ? error.message : 'PDF файлын ашу мүмкін болмады. Мәтіндік PDF файлын тексеріңіз.');
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+
+  function applyPdfRanking() {
+    if (!pdfRanking.length) return;
+    if (source.trim() && !window.confirm('Қазіргі тізім PDF рейтингіндегі оқушылармен ауыстырылады. Жалғастыру керек пе?')) return;
+    setSource(pdfRanking.map(row => row.name).join('\n'));
+    setPlaces(pdfRanking.map(row => row.place));
+    setScores(pdfRanking.map(row => String(row.score)));
+    setPdfRows(null);
   }
 
   async function downloadRows(selectedRows) {
@@ -139,6 +179,7 @@ export default function CertificateBatch({
         renderCertificate(canvas, image, selected, {
           ...values, student: row.name, secondStudent: row.second,
           awardPlace: String(row.place || selected.place || '1'),
+          score: row.score ?? values.score,
         }, photo);
         const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/png'));
         if (!blob) throw new Error('PNG файлын дайындау мүмкін болмады.');
@@ -174,12 +215,34 @@ export default function CertificateBatch({
     if (canDownload) downloadRows(rows);
   }
 
-  return <div className="certificate-batch">
+  return <>
+    {pdfRows && <section className="certificate-pdf-review" aria-label="PDF рейтингін тексеру">
+      <div><strong>PDF рейтингін тексеріңіз</strong><p className="certificate-pdf-filename">{pdfName}</p></div>
+      <label>Бірдей балл кезіндегі орын
+        <select value={tieRule} onChange={event => setTieRule(event.target.value)}>
+          <option value="dense">Орын қалдырмау: 1, 1, 2, 3</option>
+          <option value="competition">Орын өткізіледі: 1, 1, 3</option>
+        </select>
+      </label>
+      <p>Алғашқы үш орынға кіргендердің барлығы көрсетілді. Балл бірдей болса, орын да бірдей.</p>
+      <ol className="certificate-pdf-list">
+        {pdfRanking.map((row, index) => <li key={index}><span>{row.place}-орын</span><strong>{row.name}</strong><span>{row.score} балл</span></li>)}
+      </ol>
+      <button type="button" onClick={applyPdfRanking}>Оқушыларды сертификатқа қосу</button>
+    </section>}
+    <div className="certificate-batch">
     <form className="certificate-form" onSubmit={downloadBatch}>
       <div className="certificate-period-fields">
         {template.period === 'Айлық' && <label>Ай нөмірі<input type="number" min="1" max="99" value={month} onChange={event => setMonth(event.target.value)} required /></label>}
         <label>Апта нөмірі<input type="number" min="1" max="99" value={week} onChange={event => setWeek(event.target.value)} required /></label>
       </div>
+      {mode === 'flexible' && <div className="certificate-pdf-import">
+        <label className="certificate-pdf-upload"><FileUp size={16} aria-hidden="true" /> {pdfBusy ? 'PDF оқылып жатыр…' : 'PDF рейтингін оқу'}
+          <input type="file" accept="application/pdf,.pdf" onChange={chooseRankingPdf} disabled={pdfBusy} />
+        </label>
+        <p className="certificate-batch-hint">Файл құрылғыңызда оқылады. Рейтингті алдымен тексеріңіз.</p>
+        {pdfError && <p className="certificate-pdf-error" role="alert">{pdfError}</p>}
+      </div>}
       <label>Оқушылар тізімі
         <textarea value={source} onChange={event => changeSource(event.target.value)} rows={7}
           placeholder={template.pair ? 'Бірінші оқушы\tЕкінші оқушы' : 'Қалыбекқызы Ойсана\nМұханбет Ханкелді\nРайев Алихан'} />
@@ -202,6 +265,7 @@ export default function CertificateBatch({
       <label>Мұғалімнің аты-жөні<input value={teacher} onChange={event => setTeacher(event.target.value)} maxLength={120} required /></label>
       {(template.subjectBadge || template.id === 'trophy') && <label>Пән<input value={subject} onChange={event => setSubject(event.target.value)} maxLength={80} required /></label>}
       {template.id === 'trophy' && <label>Балл<input value={score} onChange={event => setScore(event.target.value)} maxLength={30} required /></label>}
+      {template.id === 'trophy' && rows.some(row => row.score !== null) && <p className="certificate-batch-hint">PDF-тен алынған әр оқушының өз балы сертификатта көрсетіледі.</p>}
       {template.id === 'photo' && <label>Фотосурет<input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} />
         {photoLoading && <span role="status">Фотосурет жүктеліп жатыр…</span>}
         {photoError && <span role="alert">{photoError}</span>}
@@ -220,6 +284,7 @@ export default function CertificateBatch({
       {rows.map((row, index) => <article className="certificate-batch-card" key={index}>
         <div className="certificate-batch-card-heading">
           <strong>{row.name}{row.second ? ' · ' + row.second : ''}</strong>
+          {row.score !== null && <span>{row.score} балл</span>}
           {mode === 'flexible' && <label>Орын
             <select value={row.place} onChange={event => setPlaces(current => {
               const next = [...current];
@@ -241,5 +306,5 @@ export default function CertificateBatch({
         </button>
       </article>)}
     </section>
-  </div>;
+  </div></>;
 }
