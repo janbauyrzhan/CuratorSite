@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from 'react';
 import { Download } from 'lucide-react';
+import { previousWeeklyRanking } from '../lib/certificateAwardHistory';
 
 function familyId(template, place) {
   if (/^weekly-[123]$/.test(template.id)) return 'weekly-' + place;
@@ -64,6 +65,7 @@ export default function CertificateBatch({
   const [error, setError] = useState('');
   const imageCache = useRef(new Map());
   const mode = rankMode(template);
+  const previousRanking = previousWeeklyRanking(activeGroup, week);
   const rows = readRows(source, template.pair).map((row, index) => ({
     ...row,
     place: mode === 'nomination' ? null : mode === 'fixed' ? template.place : (places[index] ?? (index < 3 ? String(index + 1) : '')),
@@ -94,6 +96,30 @@ export default function CertificateBatch({
 
   // Keep the loader stable while a user types in the form.
   const loader = useRef(getImage).current;
+
+  function loadPreviousRanking() {
+    if (!previousRanking.length) return;
+    if (source.trim() && !window.confirm('Қазіргі тізім өткен аптаның рейтингімен ауыстырылады. Жалғастыру керек пе?')) return;
+    setSource(previousRanking.map(row => row.name).join('\n'));
+    setPlaces(previousRanking.map(row => row.place));
+  }
+
+  function changeSource(nextSource) {
+    // Keep each existing student's place when lines are inserted or moved.
+    const existing = new Map();
+    for (const row of rows) {
+      const key = row.name + '\t' + row.second;
+      const list = existing.get(key) || [];
+      list.push(row.place);
+      existing.set(key, list);
+    }
+    const nextPlaces = readRows(nextSource, template.pair).map((row, index) => {
+      const matches = existing.get(row.name + '\t' + row.second);
+      return matches?.length ? matches.shift() : (index < 3 ? String(index + 1) : '');
+    });
+    setSource(nextSource);
+    setPlaces(nextPlaces);
+  }
 
   async function downloadBatch(event) {
     event.preventDefault();
@@ -145,21 +171,30 @@ export default function CertificateBatch({
 
   return <div className="certificate-batch">
     <form className="certificate-form" onSubmit={downloadBatch}>
+      <div className="certificate-period-fields">
+        {template.period === 'Айлық' && <label>Ай нөмірі<input type="number" min="1" max="99" value={month} onChange={event => setMonth(event.target.value)} required /></label>}
+        <label>Апта нөмірі<input type="number" min="1" max="99" value={week} onChange={event => setWeek(event.target.value)} required /></label>
+      </div>
       <label>Оқушылар тізімі
-        <textarea value={source} onChange={event => setSource(event.target.value)} rows={7}
+        <textarea value={source} onChange={event => changeSource(event.target.value)} rows={7}
           placeholder={template.pair ? 'Бірінші оқушы\tЕкінші оқушы' : 'Қалыбекқызы Ойсана\nМұханбет Ханкелді\nРайев Алихан'} />
       </label>
       <p className="certificate-batch-hint">{template.pair
         ? 'Әр жолға бір жұпты қойыңыз. Екі оқушы бөлек бағандарда болуы керек.'
         : 'Әр жолға бір оқушыдан қойыңыз. Орнын әр сертификатта өзгертуге болады.'}</p>
+      {mode === 'flexible' && template.period === 'Апталық' && <div className="certificate-previous-ranking">
+        <button type="button" onClick={loadPreviousRanking} disabled={!previousRanking.length}>
+          Өткен аптаның рейтингін жүктеу
+        </button>
+        <p className="certificate-batch-hint">{!activeGroup ? 'Рейтингті көру үшін топты таңдаңыз.'
+          : !validWeek || Number(week) <= 1 ? 'Алдыңғы апта үшін апта нөмірін таңдаңыз.'
+          : previousRanking.length ? `${Number(week) - 1}-апта · ${previousRanking.length} оқушы, орындарымен бірге`
+          : `${Number(week) - 1}-аптада сақталған рейтинг жоқ. Сертификатты жүктегенде нәтиже тарихқа қосылады.`}</p>
+      </div>}
       {mode === 'fixed' && <p className="certificate-batch-hint">Бұл үлгіде {template.place}-орын бекітілген. Тізімдегі барлық оқушыға осы орын беріледі.</p>}
       {mode === 'flexible' && rows.some(row => !row.place) && <p className="certificate-batch-hint">Төртінші жолдан бастап әр оқушының орнын таңдаңыз.</p>}
       <label>Куратордың аты-жөні<input value={curator} onChange={event => setCurator(event.target.value)} maxLength={120} required /></label>
       <label>Мұғалімнің аты-жөні<input value={teacher} onChange={event => setTeacher(event.target.value)} maxLength={120} required /></label>
-      <div className="certificate-period-fields">
-        {template.period === 'Айлық' && <label>Ай нөмірі<input type="number" min="1" max="99" value={month} onChange={event => setMonth(event.target.value)} required /></label>}
-        <label>Апта нөмірі<input type="number" min="1" max="99" value={week} onChange={event => setWeek(event.target.value)} required /></label>
-      </div>
       {(template.subjectBadge || template.id === 'trophy') && <label>Пән<input value={subject} onChange={event => setSubject(event.target.value)} maxLength={80} required /></label>}
       {template.id === 'trophy' && <label>Балл<input value={score} onChange={event => setScore(event.target.value)} maxLength={30} required /></label>}
       {template.id === 'photo' && <label>Фотосурет<input ref={photoInput} type="file" accept="image/jpeg,image/png,image/webp" onChange={choosePhoto} />
